@@ -1,0 +1,14 @@
+{
+  "id": "{{RULE_WORKFLOW_ID}}",
+  "name": "Workflow Execution Protocol",
+  "description": "Guides the {{SKILL_PROJECT_ITERATE}} workflow for all multi-step tasks",
+  "priority": 10,
+  "scope": "all",
+  "pattern": ".*",
+  "action": "warn",
+  "category": "workflow",
+  "enabled": true,
+  "tags": ["workflow", "protocol"],
+  "keywords": [],
+  "content": "### Workflow Execution Protocol\n\n**Session Start:**\n1. Call `habitat_workflow_status` first\n2. If active workflow exists → call `habitat_skill_resolve(\"{{SKILL_PROJECT_ITERATE}}\")` and follow it\n3. If no active workflow and task ≥ 3 steps → create seed workflow, then enter Leaf Execution Cycle\n\n**Plan Mode Guidelines:**\n- Part 2 (Design Iteration) of every leaf should use `EnterPlanMode` for exploration and design when design decisions are needed\n- After `ExitPlanMode`, persist the approved plan via `habitat_doc_create` before any workflow mutation\n- Plans flow through: Plan Mode → `habitat_doc_create` → workflow tree mutation → leaf execution → TodoList\n\n**Rule Feedback (Part 2.5):**\n- Call `habitat_session_stats({ format: \"markdown\" })` to review rule activity\n- Create or update rules via `habitat_rule_create`/`habitat_rule_update` if gaps are found\n- Rule/skill changes automatically refresh CLAUDE.md and RuleEngine\n\n**General Guidelines:**\n- Include trailing \"Design iteration\", \"Rule feedback\", and \"State transition\" TodoList items in each leaf\n- Stay within the current leaf node's scope\n- The Leaf Execution Cycle (Part 1 → Part 2 → Part 2.5 → Part 3) is the single flow. Bootstrap and expand_composite are handled naturally within the cycle"
+}

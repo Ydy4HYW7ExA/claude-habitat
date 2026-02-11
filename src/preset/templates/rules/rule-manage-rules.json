@@ -1,0 +1,14 @@
+{
+  "id": "rule-manage-rules",
+  "name": "Rule Management",
+  "description": "Triggered when user wants to manage habitat rules (create, read, update, delete, list)",
+  "priority": 10,
+  "scope": "all",
+  "pattern": "rule|规则",
+  "action": "suggest",
+  "category": "management",
+  "enabled": true,
+  "tags": ["management", "rules"],
+  "keywords": ["rule", "规则", "create rule", "delete rule", "edit rule", "list rules", "添加规则", "删除规则"],
+  "content": "You MUST call habitat_skill_resolve(\"{{SKILL_MANAGE_RULES}}\") and follow the loaded protocol to manage habitat rules."
+}

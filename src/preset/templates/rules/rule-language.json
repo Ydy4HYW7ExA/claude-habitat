@@ -1,0 +1,14 @@
+{
+  "id": "rule-language",
+  "name": "Match User Language",
+  "description": "Always respond in the same language the user is using",
+  "priority": 5,
+  "scope": "all",
+  "pattern": ".*",
+  "action": "warn",
+  "category": "communication",
+  "enabled": true,
+  "tags": ["language", "communication"],
+  "keywords": [],
+  "content": "You MUST detect and match the user's language in all responses. If the user writes in Chinese, respond in Chinese. If in English, respond in English. Never switch languages unless the user does."
+}

@@ -1,0 +1,14 @@
+{
+  "id": "rule-manage-skills",
+  "name": "Skill Management",
+  "description": "Triggered when user wants to manage habitat skills (create, read, update, delete, list)",
+  "priority": 10,
+  "scope": "all",
+  "pattern": "skill|技能",
+  "action": "suggest",
+  "category": "management",
+  "enabled": true,
+  "tags": ["management", "skills"],
+  "keywords": ["skill", "技能", "create skill", "delete skill", "添加技能", "删除技能"],
+  "content": "You MUST call habitat_skill_resolve(\"{{SKILL_MANAGE_SKILLS}}\") and follow the loaded protocol to manage habitat skills."
+}

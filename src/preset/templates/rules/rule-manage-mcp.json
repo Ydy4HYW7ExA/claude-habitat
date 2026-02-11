@@ -1,0 +1,14 @@
+{
+  "id": "rule-manage-mcp",
+  "name": "MCP Bridge Management",
+  "description": "Triggered when user wants to manage MCP bridge servers (add, update, remove, list)",
+  "priority": 10,
+  "scope": "all",
+  "pattern": "bridge|mcp|第三方|外部",
+  "action": "suggest",
+  "category": "management",
+  "enabled": true,
+  "tags": ["management", "mcp", "bridge"],
+  "keywords": ["bridge", "mcp", "third-party", "第三方", "外部服务", "add server", "添加服务器"],
+  "content": "You MUST call habitat_skill_resolve(\"{{SKILL_MANAGE_MCP}}\") and follow the loaded protocol to manage MCP bridge servers."
+}

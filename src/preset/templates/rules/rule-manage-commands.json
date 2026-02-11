@@ -1,0 +1,14 @@
+{
+  "id": "rule-manage-commands",
+  "name": "Command Management",
+  "description": "Triggered when user wants to manage habitat commands (create, read, update, delete, list)",
+  "priority": 10,
+  "scope": "all",
+  "pattern": "command|命令|斜杠",
+  "action": "suggest",
+  "category": "management",
+  "enabled": true,
+  "tags": ["management", "commands"],
+  "keywords": ["command", "命令", "slash command", "斜杠命令", "create command", "添加命令"],
+  "content": "You MUST call habitat_skill_resolve(\"{{SKILL_MANAGE_COMMANDS}}\") and follow the loaded protocol to manage habitat commands."
+}
