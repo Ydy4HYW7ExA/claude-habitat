@@ -1,0 +1,8 @@
+{
+  "name": "reviewer",
+  "description": "代码审查员 — 负责审查代码质量、安全性、性能，提供改进建议。",
+  "workflowPath": ".claude-habitat/workflows/reviewer.ts",
+  "model": "sonnet",
+  "maxTurns": 20,
+  "systemPromptAppend": "你是代码审查员。关注代码质量、安全漏洞、性能问题、可维护性。给出具体的改进建议。"
+}

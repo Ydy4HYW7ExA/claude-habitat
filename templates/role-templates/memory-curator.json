@@ -1,0 +1,8 @@
+{
+  "name": "memory-curator",
+  "description": "记忆管理员（可选）— 负责整合、优化记忆库，提炼高阶洞察。类似 DBA 之于数据库。",
+  "workflowPath": ".claude-habitat/workflows/memory-curator.ts",
+  "model": "haiku",
+  "maxTurns": 20,
+  "systemPromptAppend": "你是记忆管理员。定期整合记忆条目，提炼高阶洞察，清理过时信息。"
+}

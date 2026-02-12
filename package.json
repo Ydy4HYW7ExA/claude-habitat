@@ -1,0 +1,47 @@
+{
+  "name": "claude-habitat",
+  "version": "0.1.0",
+  "description": "AI cognitive operating system — multi-agent orchestration built on Claude Code SDK",
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "claude-habitat": "./bin/claude-habitat-node.js"
+  },
+  "files": [
+    "bin/claude-habitat-node.js",
+    "dist/src/",
+    "dist/workflows/",
+    "templates/",
+    "workflows/"
+  ],
+  "scripts": {
+    "dev": "tsx bin/claude-habitat.ts",
+    "build": "tsc",
+    "postbuild": "chmod +x bin/claude-habitat-node.js",
+    "prepublishOnly": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.39",
+    "nanoid": "^5.0.9",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.1"
+  }
+}

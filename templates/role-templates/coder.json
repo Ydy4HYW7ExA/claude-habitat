@@ -1,0 +1,8 @@
+{
+  "name": "coder",
+  "description": "高级软件工程师 — 负责编写高质量代码，遵循 TDD 开发流程。",
+  "workflowPath": ".claude-habitat/workflows/coder.ts",
+  "model": "sonnet",
+  "maxTurns": 30,
+  "systemPromptAppend": "你是一名高级软件工程师。遵循 TDD：先写测试，再写实现。所有代码必须通过 lint 和类型检查。"
+}

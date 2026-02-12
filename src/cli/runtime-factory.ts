@@ -1,0 +1,178 @@
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+import { PositionManager } from '../position/manager.js';
+import { FileMemoryStoreFactory } from '../memory/factory.js';
+import { AttentionEnhancer } from '../attention/enhancer.js';
+import { RoleFramingStrategy } from '../attention/strategies/role-framing.js';
+import { WorkflowInjectionStrategy } from '../attention/strategies/workflow-injection.js';
+import { MemoryRetrievalStrategy } from '../attention/strategies/memory-retrieval.js';
+import { HistoryConstructionStrategy } from '../attention/strategies/history-construction.js';
+import { ContextBudgetStrategy } from '../attention/strategies/context-budget.js';
+import { WorkflowRuntime } from '../workflow/runtime.js';
+import { AiClient } from '../ai/client.js';
+import { SessionManager } from '../ai/session-manager.js';
+import { EventBus } from '../orchestration/event-bus.js';
+import { Orchestrator } from '../orchestration/orchestrator.js';
+import type { ConcurrencyConfig } from '../orchestration/types.js';
+import { HABITAT_DIR, CONFIG_FILE, MEMORY_DIR, formatTimestamp, DEFAULT_AI_MODEL, DEFAULT_AI_MAX_TURNS, DEFAULT_AI_MAX_BUDGET_USD, TASK_EVENT_PREFIX } from '../constants.js';
+
+import type { LogFn } from '../types.js';
+export type { LogFn } from '../types.js';
+
+export interface HabitatRuntime {
+  positionManager: PositionManager;
+  memoryFactory: FileMemoryStoreFactory;
+  eventBus: EventBus;
+  orchestrator: Orchestrator;
+  workflowRuntime: WorkflowRuntime;
+  sessionManager?: SessionManager;
+  config: Record<string, unknown>;
+  logger: LogFn;
+}
+
+export interface RuntimeOptions {
+  /** Override AI defaults (e.g. bootstrap uses opus/50 turns/5.0 USD) */
+  aiDefaults?: {
+    model?: string;
+    maxTurns?: number;
+    maxBudgetUsd?: number;
+  };
+  /**
+   * Which attention strategies to register.
+   * 'full' = all 5 strategies (default for run).
+   * 'minimal' = role-framing + memory-retrieval + context-budget
+   *   (bootstrap skips workflow-injection and history-construction
+   *    because the org-architect has no prior history to construct
+   *    and its workflow is already in the prompt context).
+   */
+  attentionMode?: 'full' | 'minimal';
+  /** Custom callFn for the workflow runtime. Defaults to no-op. */
+  callFn?: (targetPositionId: string, taskType: string, payload: unknown) => Promise<unknown>;
+  /** Enable persistent sessions for background positions. */
+  enableSessions?: boolean;
+}
+
+export const defaultLogger: LogFn = (level, message) => {
+  const ts = formatTimestamp();
+  const out = level === 'error' ? console.error : console.log;
+  out(`[${ts}] [${level}] ${message}`);
+};
+
+/**
+ * Verify that the project has been initialized.
+ * Throws a user-facing error message and exits if not.
+ */
+export async function ensureInitialized(projectRoot: string): Promise<string> {
+  const habitatDir = path.join(projectRoot, HABITAT_DIR);
+  try {
+    await fs.access(path.join(habitatDir, CONFIG_FILE));
+  } catch {
+    console.error('Project not initialized. Run: claude-habitat init');
+    process.exit(1);
+  }
+  return habitatDir;
+}
+
+/**
+ * Create a fully-wired HabitatRuntime from a project root.
+ * This is the composition root — all subsystems are assembled here.
+ */
+export async function createHabitatRuntime(
+  projectRoot: string,
+  options: RuntimeOptions = {},
+): Promise<HabitatRuntime> {
+  const habitatDir = path.join(projectRoot, HABITAT_DIR);
+  const configData = await fs.readFile(path.join(habitatDir, CONFIG_FILE), 'utf-8');
+  const config = JSON.parse(configData) as Record<string, unknown>;
+
+  const positionManager = new PositionManager(habitatDir);
+  const memoryFactory = new FileMemoryStoreFactory(path.join(habitatDir, MEMORY_DIR));
+  const eventBus = new EventBus(habitatDir);
+
+  // Attention enhancer
+  const attentionEnhancer = new AttentionEnhancer();
+  attentionEnhancer.register(new RoleFramingStrategy());
+  if (options.attentionMode !== 'minimal') {
+    attentionEnhancer.register(new WorkflowInjectionStrategy());
+  }
+  attentionEnhancer.register(new MemoryRetrievalStrategy());
+  if (options.attentionMode !== 'minimal') {
+    attentionEnhancer.register(new HistoryConstructionStrategy());
+  }
+  attentionEnhancer.register(new ContextBudgetStrategy());
+
+  // AI client
+  const aiDefaults = options.aiDefaults ?? {};
+  const aiClient = new AiClient({
+    defaultModel: String(aiDefaults.model ?? config.defaultModel ?? DEFAULT_AI_MODEL),
+    defaultMaxTurns: Number(aiDefaults.maxTurns ?? config.defaultMaxTurns ?? DEFAULT_AI_MAX_TURNS),
+    defaultMaxBudgetUsd: Number(aiDefaults.maxBudgetUsd ?? config.defaultMaxBudgetUsd ?? DEFAULT_AI_MAX_BUDGET_USD),
+    projectRoot,
+  });
+
+  const logger = defaultLogger;
+
+  // Late-binding reference for circular dependency between runtime and orchestrator
+  let orchestrator: Orchestrator;
+
+  const callFn = options.callFn ?? (async () => null);
+
+  // Optional session manager for persistent background sessions
+  let sessionManager: SessionManager | undefined;
+  if (options.enableSessions) {
+    sessionManager = new SessionManager({
+      projectRoot,
+      defaultModel: String(aiDefaults.model ?? config.defaultModel ?? DEFAULT_AI_MODEL),
+      defaultMaxTurns: Number(aiDefaults.maxTurns ?? config.defaultMaxTurns ?? DEFAULT_AI_MAX_TURNS),
+      defaultMaxBudgetUsd: Number(aiDefaults.maxBudgetUsd ?? config.defaultMaxBudgetUsd ?? DEFAULT_AI_MAX_BUDGET_USD),
+      logger,
+    });
+  }
+
+  const workflowRuntime = new WorkflowRuntime({
+    projectRoot,
+    aiCaller: aiClient,
+    attentionEnhancer,
+    memoryStoreGetter: (pid) => memoryFactory.getStore(pid),
+    globalMemoryStore: memoryFactory.getGlobalStore(),
+    eventBus,
+    positionManager,
+    emitFn: async (taskType, payload, sourcePositionId, targetPositionId) => {
+      const event = eventBus.createEvent(
+        `${TASK_EVENT_PREFIX}${taskType}`,
+        sourcePositionId,
+        payload,
+        targetPositionId,
+      );
+      await eventBus.emit(event);
+    },
+    callFn,
+    logger,
+    sessionManager,
+  });
+
+  const concurrency = config.concurrency as ConcurrencyConfig | undefined;
+  orchestrator = new Orchestrator(
+    positionManager,
+    workflowRuntime,
+    eventBus,
+    concurrency,
+    sessionManager,
+    sessionManager ? (pid) => memoryFactory.getStore(pid) : undefined,
+  );
+
+  return { positionManager, memoryFactory, eventBus, orchestrator, workflowRuntime, sessionManager, config, logger };
+}
+
+/**
+ * Register graceful shutdown handlers for SIGINT/SIGTERM.
+ */
+export function onShutdown(orchestrator: Orchestrator): void {
+  const shutdown = async () => {
+    console.log('\nShutting down...');
+    await orchestrator.stop();
+    process.exit(0);
+  };
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+}
