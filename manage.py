@@ -12,7 +12,6 @@ Usage:
 
 import json
 import os
-import platform
 import shutil
 import subprocess
 import sys
@@ -20,7 +19,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # ─── 常量 ──────────────────────────────────────────────────────────────
-INSTALL_INFO = Path.home() / ".claude-habitat.json"
+HABITAT_HOME = Path.home() / ".claude-habitat"
+INSTALL_INFO = HABITAT_HOME / ".claude-habitat.json"
 CLAUDE_SETTINGS = Path.home() / ".claude" / "settings.json"
 PROJECT_ROOT = Path(__file__).resolve().parent
 
@@ -53,13 +53,6 @@ def find_npm() -> str:
         sys.exit(1)
     return npm
 
-def find_node() -> str:
-    node = shutil.which("node")
-    if not node:
-        fail("node 未找到，请先安装 Node.js >= 18")
-        sys.exit(1)
-    return node
-
 def get_version() -> str:
     try:
         pkg = json.loads((PROJECT_ROOT / "package.json").read_text())
@@ -76,32 +69,37 @@ def read_install_info() -> dict:
     except Exception:
         return {}
 
-def write_install_info(version: str, source_path: str, bin_path: str, api_key_source: str):
+def write_install_info(version: str, source_path: str, bin_path: str, credentials: dict | None = None):
+    HABITAT_HOME.mkdir(parents=True, exist_ok=True)
     data = {
         "version": version,
         "sourcePath": source_path,
         "binPath": bin_path,
-        "apiKeySource": api_key_source,
         "installedAt": datetime.now(timezone.utc).isoformat(),
     }
+    if credentials:
+        data["credentials"] = credentials
     INSTALL_INFO.write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
 def remove_install_info():
     INSTALL_INFO.unlink(missing_ok=True)
+    # 如果目录为空则删除
+    if HABITAT_HOME.exists() and not any(HABITAT_HOME.iterdir()):
+        HABITAT_HOME.rmdir()
 
 # ─── API 凭证发现 ──────────────────────────────────────────────────────
 
-def discover_api_credentials() -> str:
-    """从 ~/.claude/settings.json 发现 API 凭证，返回 api_key_source。"""
+def discover_api_credentials() -> dict | None:
+    """从 ~/.claude/settings.json 发现 API 凭证，返回 credentials dict 或 None。"""
     if not CLAUDE_SETTINGS.exists():
         warn(f"未找到 {CLAUDE_SETTINGS}")
-        return "none"
+        return None
 
     try:
         settings = json.loads(CLAUDE_SETTINGS.read_text())
     except Exception:
         warn(f"无法解析 {CLAUDE_SETTINGS}")
-        return "none"
+        return None
 
     env = settings.get("env", {})
     key = env.get("ANTHROPIC_AUTH_TOKEN") or env.get("ANTHROPIC_API_KEY") or ""
@@ -109,7 +107,7 @@ def discover_api_credentials() -> str:
 
     if not key:
         warn("Claude settings 中未找到 API key")
-        return "none"
+        return None
 
     masked = f"{key[:8]}...{key[-4:]}"
     print(f"\n{_c('1', '发现 Claude API 凭证:')}")
@@ -119,71 +117,31 @@ def discover_api_credentials() -> str:
     print()
 
     try:
-        answer = input("是否将这些凭证写入环境变量？[Y/n] ").strip() or "Y"
+        answer = input("是否将这些凭证写入配置文件？[Y/n] ").strip() or "Y"
     except EOFError:
         answer = "Y"
         print("Y (auto)")
     if answer.lower() != "y":
         info("跳过凭证配置")
-        return "skipped"
+        return None
 
-    _write_env_vars(key, url)
-    return "claude-settings"
-
-def _write_env_vars(key: str, url: str):
-    """将环境变量写入 shell rc 文件。"""
-    marker = "# claude-habitat managed"
-
-    if platform.system() == "Windows":
-        # Windows: 用 setx 写入用户环境变量
-        subprocess.run(["setx", "ANTHROPIC_API_KEY", key], capture_output=True)
-        if url:
-            subprocess.run(["setx", "ANTHROPIC_BASE_URL", url], capture_output=True)
-        ok("已写入 Windows 用户环境变量（重启终端生效）")
-    else:
-        # Unix: 写入 shell rc
-        rc = _find_shell_rc()
-        lines = rc.read_text() if rc.exists() else ""
-
-        # 清除旧的
-        new_lines = [l for l in lines.splitlines() if marker not in l]
-        new_lines.append(f'export ANTHROPIC_API_KEY="{key}" {marker}')
-        if url:
-            new_lines.append(f'export ANTHROPIC_BASE_URL="{url}" {marker}')
-
-        rc.write_text("\n".join(new_lines) + "\n")
-        ok(f"已写入 {rc}（新终端自动生效）")
-
-    # 当前进程也生效
-    os.environ["ANTHROPIC_API_KEY"] = key
+    creds = {"apiKey": key}
     if url:
-        os.environ["ANTHROPIC_BASE_URL"] = url
+        creds["baseUrl"] = url
+    ok(f"凭证将写入 {INSTALL_INFO}")
+    return creds
 
-def _find_shell_rc() -> Path:
-    """找到当前用户的 shell rc 文件。"""
-    home = Path.home()
-    shell = os.environ.get("SHELL", "")
-    if "zsh" in shell or (home / ".zshrc").exists():
-        return home / ".zshrc"
-    return home / ".bashrc"
-
-def _clean_env_vars():
-    """清理 shell rc 中的环境变量。"""
+def _clean_legacy_env_vars():
+    """清理旧版写入 shell rc 的环境变量。"""
     marker = "# claude-habitat managed"
-
-    if platform.system() == "Windows":
-        subprocess.run(["setx", "ANTHROPIC_API_KEY", ""], capture_output=True)
-        subprocess.run(["setx", "ANTHROPIC_BASE_URL", ""], capture_output=True)
-        ok("已清理 Windows 用户环境变量")
-    else:
-        for name in [".bashrc", ".zshrc"]:
-            rc = Path.home() / name
-            if rc.exists():
-                lines = rc.read_text().splitlines()
-                cleaned = [l for l in lines if marker not in l]
-                if len(cleaned) != len(lines):
-                    rc.write_text("\n".join(cleaned) + "\n")
-                    ok(f"已清理 {rc} 中的环境变量")
+    for name in [".bashrc", ".zshrc"]:
+        rc = Path.home() / name
+        if rc.exists():
+            lines = rc.read_text().splitlines()
+            cleaned = [l for l in lines if marker not in l]
+            if len(cleaned) != len(lines):
+                rc.write_text("\n".join(cleaned) + "\n")
+                ok(f"已清理 {rc} 中的旧版环境变量")
 
 # ─── 安装 ──────────────────────────────────────────────────────────────
 
@@ -235,15 +193,17 @@ def do_install():
     ok(f"安装成功: {bin_path}")
 
     # Step 7: API 凭证
-    api_key_source = "none"
+    credentials = None
     if os.environ.get("ANTHROPIC_API_KEY"):
-        ok("ANTHROPIC_API_KEY 已设置")
-        api_key_source = "env"
+        ok("ANTHROPIC_API_KEY 已在环境变量中设置")
     else:
-        api_key_source = discover_api_credentials()
+        credentials = discover_api_credentials()
 
-    # Step 8: 写入安装信息
-    write_install_info(version, str(PROJECT_ROOT), bin_path, api_key_source)
+    # Step 8: 清理旧版 shell rc 环境变量
+    _clean_legacy_env_vars()
+
+    # Step 9: 写入安装信息（含凭证）
+    write_install_info(version, str(PROJECT_ROOT), bin_path, credentials)
     ok(f"安装信息已写入 {INSTALL_INFO}")
 
     print(f"\n{_c('1;32', '安装完成!')}")
@@ -270,12 +230,18 @@ def do_uninstall():
         run([npm, "uninstall", "-g", "claude-habitat"])
         ok("全局包已卸载")
 
-    # Step 2: 清理环境变量
-    _clean_env_vars()
+    # Step 2: 清理旧版 shell rc 环境变量
+    _clean_legacy_env_vars()
 
-    # Step 3: 删除安装信息
+    # Step 3: 删除安装信息（含凭证）
     remove_install_info()
     ok(f"已删除 {INSTALL_INFO}")
+
+    # Step 4: 清理旧版 ~/.claude-habitat.json
+    old_info = Path.home() / ".claude-habitat.json"
+    if old_info.exists():
+        old_info.unlink()
+        ok(f"已清理旧版 {old_info}")
 
     print(f"\n{_c('1;32', '卸载完成')}\n")
 
@@ -295,7 +261,16 @@ def do_status():
         ok("已安装")
         print()
         data = read_install_info()
-        print(f"  {_c('2', json.dumps(data, indent=2, ensure_ascii=False))}")
+        # 显示时隐藏凭证明文
+        display = dict(data)
+        if "credentials" in display:
+            creds = display["credentials"]
+            key = creds.get("apiKey", "")
+            if key:
+                creds = dict(creds)
+                creds["apiKey"] = f"{key[:8]}...{key[-4:]}"
+                display["credentials"] = creds
+        print(f"  {_c('2', json.dumps(display, indent=2, ensure_ascii=False))}")
         print()
         bin_path = shutil.which("claude-habitat")
         print(f"  命令路径: {bin_path}")
@@ -309,14 +284,19 @@ def do_status():
         info("未安装")
 
     print()
-    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    # 检查运行时凭证来源
+    data = read_install_info()
+    creds = data.get("credentials", {})
+    key = os.environ.get("ANTHROPIC_API_KEY") or creds.get("apiKey", "")
+    url = os.environ.get("ANTHROPIC_BASE_URL") or creds.get("baseUrl", "")
+
     if key:
         masked = f"{key[:8]}...{key[-4:]}"
-        ok(f"ANTHROPIC_API_KEY: {_c('2', masked)}")
+        source = "env" if os.environ.get("ANTHROPIC_API_KEY") else "config"
+        ok(f"ANTHROPIC_API_KEY: {_c('2', masked)} ({source})")
     else:
         warn("ANTHROPIC_API_KEY 未设置")
 
-    url = os.environ.get("ANTHROPIC_BASE_URL", "")
     if url:
         ok(f"ANTHROPIC_BASE_URL: {_c('2', url)}")
     print()
