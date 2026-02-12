@@ -1,0 +1,5 @@
+# Mark dist/ as generated — hide from git diff, merge using ours
+dist/** linguist-generated=true
+dist/**/*.js diff=generated
+dist/**/*.d.ts diff=generated
+dist/**/*.map diff=generated
