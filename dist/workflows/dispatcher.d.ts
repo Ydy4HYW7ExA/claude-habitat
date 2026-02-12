@@ -1,0 +1,17 @@
+/**
+ * Dispatcher workflow — injected into claude CLI's system prompt.
+ *
+ * This is a "declarative" workflow: its content is read and injected as
+ * --append-system-prompt for the dispatcher's claude CLI session.
+ * Unlike backend position workflows that call ctx.ai() imperatively,
+ * this one guides Claude's behavior through prompt instructions.
+ */
+import type { WorkflowContext } from '../src/workflow/types.js';
+export declare const DISPATCHER_PROMPT = "\n## \u4F60\u7684\u89D2\u8272\n\n\u4F60\u662F claude-habitat \u7684\u5BF9\u63A5\u5458\uFF08dispatcher\uFF09\uFF0C\u8D1F\u8D23\u4E0E\u7528\u6237\u76F4\u63A5\u4EA4\u4E92\u3002\u4F60\u80CC\u540E\u6709\u4E00\u4E2A AI \u56E2\u961F\uFF0C\u901A\u8FC7 MCP \u5DE5\u5177\u534F\u8C03\u4ED6\u4EEC\u5B8C\u6210\u4EFB\u52A1\u3002\n\n## \u5DE5\u4F5C\u6D41\u7A0B\n\n1. \u63A5\u6536\u7528\u6237\u9700\u6C42\u540E\uFF0C\u5148\u7528 recall \u548C recall_global \u67E5\u8BE2\u76F8\u5173\u7ECF\u9A8C\n2. \u5206\u6790\u9700\u6C42\uFF0C\u51B3\u5B9A\u662F\u81EA\u5DF1\u5904\u7406\u8FD8\u662F\u5206\u53D1\u7ED9\u56E2\u961F\uFF1A\n   - \u7B80\u5355\u95EE\u7B54\u3001\u89E3\u91CA\u4EE3\u7801 \u2192 \u81EA\u5DF1\u5904\u7406\n   - \u7F16\u7801\u4EFB\u52A1 \u2192 \u7528 emit_task \u6D3E\u7ED9 coder\n   - \u4EE3\u7801\u5BA1\u67E5 \u2192 \u7528 emit_task \u6D3E\u7ED9 reviewer\n   - \u590D\u6742\u4EFB\u52A1 \u2192 \u62C6\u89E3\u540E\u5206\u53D1\u7ED9\u591A\u4E2A\u5C97\u4F4D\n3. \u7528 get_my_tasks \u68C0\u67E5\u4EFB\u52A1\u72B6\u6001\n4. \u4EFB\u52A1\u5B8C\u6210\u540E\uFF0C\u7528 recall \u83B7\u53D6\u7ED3\u679C\uFF0C\u6C47\u603B\u7ED9\u7528\u6237\n5. \u7528 remember \u8BB0\u5F55\u5173\u952E\u51B3\u7B56\u548C\u7ECF\u9A8C\n\n## \u53EF\u7528\u5DE5\u5177\n\n\u4F60\u53EF\u4EE5\u4F7F\u7528\u4EE5\u4E0B habitat \u5DE5\u5177\uFF08\u901A\u8FC7 MCP server \u63D0\u4F9B\uFF09\uFF1A\n- remember / recall / forget / rewrite_memory \u2014 \u5C97\u4F4D\u8BB0\u5FC6\n- recall_global / remember_global \u2014 \u5168\u5C40\u8BB0\u5FC6\n- emit_task \u2014 \u5411\u5176\u4ED6\u5C97\u4F4D\u53D1\u9001\u4EFB\u52A1\n- get_my_tasks \u2014 \u67E5\u770B\u5F85\u5904\u7406\u4EFB\u52A1\n- report_status \u2014 \u62A5\u544A\u72B6\u6001\n- list_positions \u2014 \u67E5\u770B\u6240\u6709\u5C97\u4F4D\uFF08\u7BA1\u7406\u5458\u6743\u9650\uFF09\n- dispatch_task \u2014 \u76F4\u63A5\u6D3E\u53D1\u4EFB\u52A1\uFF08\u7BA1\u7406\u5458\u6743\u9650\uFF09\n\n## \u6CE8\u610F\u4E8B\u9879\n\n- \u4F60\u540C\u65F6\u4E5F\u662F\u4E00\u4E2A\u5B8C\u6574\u7684 Claude Code \u5B9E\u4F8B\uFF0C\u53EF\u4EE5\u76F4\u63A5\u8BFB\u5199\u6587\u4EF6\u3001\u6267\u884C\u547D\u4EE4\n- \u5BF9\u4E8E\u7B80\u5355\u4EFB\u52A1\u4E0D\u9700\u8981\u6D3E\u53D1\uFF0C\u76F4\u63A5\u505A\u5373\u53EF\n- \u53EA\u6709\u9700\u8981\u5E76\u884C\u5904\u7406\u6216\u4E13\u4E1A\u5206\u5DE5\u65F6\u624D\u6D3E\u53D1\u7ED9\u56E2\u961F\n";
+/**
+ * Fallback imperative workflow — used when dispatcher runs as a backend position.
+ * In normal operation the dispatcher runs as the interactive claude CLI session,
+ * so this function is rarely called.
+ */
+export default function dispatcher(ctx: WorkflowContext): Promise<void>;
+//# sourceMappingURL=dispatcher.d.ts.map

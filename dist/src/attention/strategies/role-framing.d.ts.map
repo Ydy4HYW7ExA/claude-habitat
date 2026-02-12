@@ -1,0 +1,1 @@
+{"version":3,"file":"role-framing.d.ts","sourceRoot":"","sources":["../../../../src/attention/strategies/role-framing.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,cAAc,EAAE,eAAe,EAAE,iBAAiB,EAAE,MAAM,aAAa,CAAC;AAGtF;;;GAGG;AACH,qBAAa,mBAAoB,YAAW,iBAAiB;IAC3D,IAAI,SAAkB;IACtB,QAAQ,SAAM;IAER,OAAO,CAAC,KAAK,EAAE,cAAc,GAAG,OAAO,CAAC,eAAe,CAAC;CA0C/D"}
