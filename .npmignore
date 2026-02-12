@@ -1,6 +1,0 @@
-# npm pack/install uses this instead of .gitignore
-# Keep it minimal — only exclude dev-only files
-tests/
-scripts/
-*.tgz
-.claude-habitat/
