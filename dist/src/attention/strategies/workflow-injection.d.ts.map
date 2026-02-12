@@ -1,1 +1,0 @@
-{"version":3,"file":"workflow-injection.d.ts","sourceRoot":"","sources":["../../../../src/attention/strategies/workflow-injection.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,cAAc,EAAE,eAAe,EAAE,iBAAiB,EAAE,MAAM,aAAa,CAAC;AAGtF;;;GAGG;AACH,qBAAa,yBAA0B,YAAW,iBAAiB;IACjE,IAAI,SAAwB;IAC5B,QAAQ,SAAM;IAER,OAAO,CAAC,KAAK,EAAE,cAAc,GAAG,OAAO,CAAC,eAAe,CAAC;CAuB/D"}

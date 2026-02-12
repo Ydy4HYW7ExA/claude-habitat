@@ -35,13 +35,13 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.39",
+    "@types/node": "^22.15.21",
     "nanoid": "^5.0.9",
+    "typescript": "^5.8.3",
     "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.15.21",
     "tsx": "^4.19.4",
-    "typescript": "^5.8.3",
     "vitest": "^3.2.1"
   }
 }
