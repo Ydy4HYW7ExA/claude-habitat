@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { init } from './init.js';
 import { createHabitatRuntime, onShutdown } from './runtime-factory.js';
-import { HABITAT_DIR, WORKFLOW_DIR, ORG_ARCHITECT_ID, CONFIG_FILE, DEFAULT_BOOTSTRAP_POLL_INTERVAL_MS, DEFAULT_BOOTSTRAP_TIMEOUT_MS, BOOTSTRAP_AI_CONFIG, CLI_SOURCE_ID, BOOTSTRAP_TASK_TYPE, TASK_STATUS, TASK_PRIORITY, MODEL, DISPATCHER_ID, DISPATCHER_ROLE_TEMPLATE, } from '../constants.js';
+import { HABITAT_DIR, PROGRAM_DIR, PROGRAM_APP_DIR, ORG_ARCHITECT_ID, CONFIG_FILE, DEFAULT_BOOTSTRAP_POLL_INTERVAL_MS, DEFAULT_BOOTSTRAP_TIMEOUT_MS, BOOTSTRAP_AI_CONFIG, CLI_SOURCE_ID, BOOTSTRAP_TASK_TYPE, TASK_STATUS, TASK_PRIORITY, MODEL, DISPATCHER_ID, DISPATCHER_ROLE_TEMPLATE, } from '../constants.js';
 import { readBuiltinWorkflow } from './package-utils.js';
 export async function bootstrap(projectRoot) {
     const habitatDir = path.join(projectRoot, HABITAT_DIR);
@@ -15,7 +15,7 @@ export async function bootstrap(projectRoot) {
         await init(projectRoot);
     }
     // Copy the built-in org-architect workflow if it doesn't exist
-    const bootstrapWorkflowPath = path.join(projectRoot, HABITAT_DIR, WORKFLOW_DIR, 'org-architect.ts');
+    const bootstrapWorkflowPath = path.join(projectRoot, HABITAT_DIR, PROGRAM_DIR, PROGRAM_APP_DIR, 'org-architect', 'workflow.mjs');
     try {
         await fs.access(bootstrapWorkflowPath);
     }
@@ -39,22 +39,22 @@ export async function bootstrap(projectRoot) {
         attentionMode: 'minimal',
     });
     // Create org-architect position
-    const template = await positionManager.getRoleTemplate(ORG_ARCHITECT_ID);
+    const template = await positionManager.getProgram(ORG_ARCHITECT_ID);
     if (!template) {
         console.error('org-architect template not found. Re-run: claude-habitat init');
         process.exit(1);
     }
-    let architect = await positionManager.getPosition(ORG_ARCHITECT_ID);
+    let architect = await positionManager.getProcess(ORG_ARCHITECT_ID);
     if (!architect) {
-        architect = await positionManager.createPosition(ORG_ARCHITECT_ID, ORG_ARCHITECT_ID);
+        architect = await positionManager.createProcess(ORG_ARCHITECT_ID, ORG_ARCHITECT_ID);
         console.log('Created org-architect position.');
     }
     // Create dispatcher position (if not already present)
-    let dispatcher = await positionManager.getPosition(DISPATCHER_ID);
+    let dispatcher = await positionManager.getProcess(DISPATCHER_ID);
     if (!dispatcher) {
-        const dispatcherTemplate = await positionManager.getRoleTemplate(DISPATCHER_ROLE_TEMPLATE);
+        const dispatcherTemplate = await positionManager.getProgram(DISPATCHER_ROLE_TEMPLATE);
         if (dispatcherTemplate) {
-            dispatcher = await positionManager.createPosition(DISPATCHER_ROLE_TEMPLATE, DISPATCHER_ID);
+            dispatcher = await positionManager.createProcess(DISPATCHER_ROLE_TEMPLATE, DISPATCHER_ID);
             console.log('Created dispatcher position.');
         }
     }
@@ -72,7 +72,7 @@ export async function bootstrap(projectRoot) {
     // Wait for completion
     const startTime = Date.now();
     while (Date.now() - startTime < DEFAULT_BOOTSTRAP_TIMEOUT_MS) {
-        const pos = await positionManager.getPosition(ORG_ARCHITECT_ID);
+        const pos = await positionManager.getProcess(ORG_ARCHITECT_ID);
         if (!pos)
             break;
         const bootstrapTask = pos.taskQueue.find(t => t.type === BOOTSTRAP_TASK_TYPE);

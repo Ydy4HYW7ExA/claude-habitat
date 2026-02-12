@@ -1,7 +1,7 @@
 // Workflow domain types
 
 import type { MemoryEntry, MemoryStore } from '../memory/types.js';
-import type { Position, RoleTemplate, Task } from '../position/types.js';
+import type { Process, Program, Task } from '../position/types.js';
 
 export type WorkflowFunction = (ctx: WorkflowContext) => Promise<void>;
 
@@ -43,8 +43,8 @@ export interface WorkflowContext {
     list(): TodoItem[];
   };
 
-  position: Position;
-  roleTemplate: RoleTemplate;
+  position: Process;
+  roleTemplate: Program;
   projectRoot: string;
 
   task: Task;

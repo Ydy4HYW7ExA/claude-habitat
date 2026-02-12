@@ -1,9 +1,9 @@
 import type { WorkflowFunction, AiOptions, AiResult } from './types.js';
 import type { MemoryStore } from '../memory/types.js';
-import type { Position, RoleTemplate, Task } from '../position/types.js';
+import type { Process, Program, Task } from '../position/types.js';
 import type { AttentionEnhancer } from '../attention/enhancer.js';
 import type { EventBus } from '../orchestration/event-bus.js';
-import type { PositionManager } from '../position/manager.js';
+import type { ProcessManager } from '../position/manager.js';
 import type { SessionManager } from '../ai/session-manager.js';
 import { WorkflowLoader } from './loader.js';
 import { buildWorkflowContext, type WorkflowDependencies } from './context-builder.js';
@@ -39,7 +39,7 @@ export interface WorkflowRuntimeConfig {
   memoryStoreGetter: (positionId: string) => MemoryStore;
   globalMemoryStore: MemoryStore;
   eventBus: EventBus;
-  positionManager: PositionManager;
+  positionManager: ProcessManager;
   emitFn: (taskType: string, payload: unknown, sourcePositionId: string, targetPositionId?: string) => Promise<void>;
   callFn: (targetPositionId: string, taskType: string, payload: unknown) => Promise<unknown>;
   logger: (level: 'debug' | 'info' | 'warn' | 'error', message: string) => void;
@@ -54,8 +54,8 @@ export class WorkflowRuntime {
   }
 
   async execute(
-    position: Position,
-    roleTemplate: RoleTemplate,
+    position: Process,
+    roleTemplate: Program,
     task: Task,
     abortController?: AbortController,
   ): Promise<{ costUsd: number }> {
@@ -163,13 +163,13 @@ export class WorkflowRuntime {
    * org-architect also gets admin tools.
    */
   async buildMcpServers(
-    position: Position,
+    position: Process,
     memoryStore: MemoryStore,
-    roleTemplate: RoleTemplate,
+    roleTemplate: Program,
   ): Promise<Record<string, unknown>> {
     const servers: Record<string, unknown> = {};
 
-    // Position-level tools (memory, events)
+    // Process-level tools (memory, events)
     const positionServer = await createPositionMcpServer({
       memoryStore,
       globalMemoryStore: this.config.globalMemoryStore,

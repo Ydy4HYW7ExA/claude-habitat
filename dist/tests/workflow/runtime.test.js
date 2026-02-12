@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { WorkflowRuntime } from '../../src/workflow/runtime.js';
 import { AttentionEnhancer } from '../../src/attention/enhancer.js';
 import { EventBus } from '../../src/orchestration/event-bus.js';
-import { PositionManager } from '../../src/position/manager.js';
+import { ProcessManager } from '../../src/position/manager.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -61,7 +61,7 @@ describe('WorkflowRuntime', () => {
             rewrite: vi.fn(async () => ({})),
         };
         const eventBus = new EventBus(tmpDir);
-        const positionManager = new PositionManager(tmpDir);
+        const positionManager = new ProcessManager(tmpDir);
         const config = {
             projectRoot: tmpDir,
             aiCaller: mockAiCaller,
@@ -85,16 +85,16 @@ describe('WorkflowRuntime', () => {
         await fs.writeFile(filePath, code);
         return name;
     }
-    function makePosition(workflowPath) {
+    function makeProcess(workflowPath) {
         return {
             id: 'coder-01',
-            roleTemplateName: 'coder',
+            programName: 'coder',
             status: POSITION_STATUS.BUSY,
             sessionHistory: [],
             taskQueue: [],
             outputRoutes: [],
-            workDir: path.join(tmpDir, 'positions', 'coder-01'),
-            memoryDir: path.join(tmpDir, 'memory', 'coder-01'),
+            workDir: path.join(tmpDir, 'process', 'coder-01'),
+            memoryDir: path.join(tmpDir, 'data', 'coder-01', 'memory'),
             createdAt: Date.now(),
             updatedAt: Date.now(),
             config: workflowPath ? { workflowPath, name: 'coder', description: '', } : undefined,
@@ -124,7 +124,7 @@ describe('WorkflowRuntime', () => {
         await ctx.memory.remember('implemented login');
       }
     `);
-        await runtime.execute(makePosition(wfPath), roleTemplate, makeTask());
+        await runtime.execute(makeProcess(wfPath), roleTemplate, makeTask());
         expect(mockAiCaller.call).toHaveBeenCalled();
     });
     it('should pass task args through context', async () => {
@@ -134,7 +134,7 @@ describe('WorkflowRuntime', () => {
         globalThis.__capturedArgs = ctx.args;
       }
     `);
-        await runtime.execute(makePosition(wfPath), roleTemplate, makeTask());
+        await runtime.execute(makeProcess(wfPath), roleTemplate, makeTask());
         // The workflow sets globalThis.__capturedArgs
         expect(globalThis.__capturedArgs).toEqual({ feature: 'login' });
         delete globalThis.__capturedArgs;
@@ -145,7 +145,7 @@ describe('WorkflowRuntime', () => {
         globalThis.__overrideRan = true;
       }
     `);
-        await runtime.execute(makePosition(wfPath), roleTemplate, makeTask());
+        await runtime.execute(makeProcess(wfPath), roleTemplate, makeTask());
         expect(globalThis.__overrideRan).toBe(true);
         delete globalThis.__overrideRan;
     });
@@ -159,7 +159,7 @@ describe('WorkflowRuntime', () => {
     `);
         const ac = new AbortController();
         ac.abort();
-        await runtime.execute(makePosition(wfPath), roleTemplate, makeTask(), ac);
+        await runtime.execute(makeProcess(wfPath), roleTemplate, makeTask(), ac);
         expect(globalThis.__aborted).toBe(true);
         delete globalThis.__aborted;
     });

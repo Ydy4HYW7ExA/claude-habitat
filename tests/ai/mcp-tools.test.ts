@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { MemoryStore, MemoryEntry } from '../../src/memory/types.js';
-import type { Position } from '../../src/position/types.js';
+import type { Process } from '../../src/position/types.js';
 import { EventBus } from '../../src/orchestration/event-bus.js';
 import {
   POSITION_STATUS, TASK_STATUS, MEMORY_LAYER, TOOL_NAME, EVENT_TYPE,
@@ -65,10 +65,10 @@ function getToolHandler(server: any, toolName: string): Function {
   return toolDef.handler;
 }
 
-describe('Position MCP Tools (memory)', () => {
+describe('Process MCP Tools (memory)', () => {
   let mockMemoryStore: MemoryStore;
   let mockGlobalStore: MemoryStore;
-  let position: Position;
+  let position: Process;
   let tmpDir: string;
   let eventBus: EventBus;
 
@@ -112,16 +112,16 @@ describe('Position MCP Tools (memory)', () => {
 
     position = {
       id: 'coder-01',
-      roleTemplateName: 'coder',
+      programName: 'coder',
       status: POSITION_STATUS.IDLE,
       sessionHistory: [],
       taskQueue: [],
       outputRoutes: [],
-      workDir: path.join(tmpDir, 'positions', 'coder-01'),
-      memoryDir: path.join(tmpDir, 'memory', 'coder-01'),
+      workDir: path.join(tmpDir, 'process', 'coder-01'),
+      memoryDir: path.join(tmpDir, 'data', 'coder-01', 'memory'),
       createdAt: Date.now(),
       updatedAt: Date.now(),
-    } as Position;
+    } as Process;
   });
 
   afterEach(async () => {
@@ -215,10 +215,10 @@ describe('Position MCP Tools (memory)', () => {
   });
 });
 
-describe('Position MCP Tools (events)', () => {
+describe('Process MCP Tools (events)', () => {
   let tmpDir: string;
   let eventBus: EventBus;
-  let position: Position;
+  let position: Process;
 
   beforeEach(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'evt-tools-'));
@@ -229,7 +229,7 @@ describe('Position MCP Tools (events)', () => {
         { id: 'task-1', status: TASK_STATUS.PENDING, type: 'implement', payload: {}, priority: 'normal', sourcePositionId: 'x', targetPositionId: 'coder-01', createdAt: Date.now() },
         { id: 'task-2', status: TASK_STATUS.RUNNING, type: 'review', payload: {}, priority: 'normal', sourcePositionId: 'x', targetPositionId: 'coder-01', createdAt: Date.now() },
       ],
-    } as Position;
+    } as Process;
   });
 
   afterEach(async () => {

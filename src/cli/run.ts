@@ -29,10 +29,10 @@ export async function runCommand(projectRoot: string, args: string[]): Promise<v
   });
 
   // Verify position exists
-  const position = await positionManager.getPosition(positionId);
+  const position = await positionManager.getProcess(positionId);
   if (!position) {
     console.error(`Position '${positionId}' not found.`);
-    const all = await positionManager.listPositions();
+    const all = await positionManager.listProcesses();
     if (all.length > 0) {
       console.log('Available positions:', all.map(p => p.id).join(', '));
     } else {
@@ -70,7 +70,7 @@ export async function runCommand(projectRoot: string, args: string[]): Promise<v
   const startTime = Date.now();
 
   while (Date.now() - startTime < timeout) {
-    const pos = await positionManager.getPosition(positionId);
+    const pos = await positionManager.getProcess(positionId);
     if (!pos) break;
 
     const t = pos.taskQueue.find(t => t.id === task.id);

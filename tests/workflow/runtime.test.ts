@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { WorkflowRuntime, type AiCaller, type WorkflowRuntimeConfig } from '../../src/workflow/runtime.js';
 import { AttentionEnhancer } from '../../src/attention/enhancer.js';
 import { EventBus } from '../../src/orchestration/event-bus.js';
-import { PositionManager } from '../../src/position/manager.js';
+import { ProcessManager } from '../../src/position/manager.js';
 import type { MemoryStore, MemoryEntry } from '../../src/memory/types.js';
-import type { Position, RoleTemplate, Task } from '../../src/position/types.js';
+import type { Process, Program, Task } from '../../src/position/types.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -72,7 +72,7 @@ describe('WorkflowRuntime', () => {
     } as unknown as MemoryStore;
 
     const eventBus = new EventBus(tmpDir);
-    const positionManager = new PositionManager(tmpDir);
+    const positionManager = new ProcessManager(tmpDir);
 
     const config: WorkflowRuntimeConfig = {
       projectRoot: tmpDir,
@@ -101,23 +101,23 @@ describe('WorkflowRuntime', () => {
     return name;
   }
 
-  function makePosition(workflowPath?: string): Position {
+  function makeProcess(workflowPath?: string): Process {
     return {
       id: 'coder-01',
-      roleTemplateName: 'coder',
+      programName: 'coder',
       status: POSITION_STATUS.BUSY,
       sessionHistory: [],
       taskQueue: [],
       outputRoutes: [],
-      workDir: path.join(tmpDir, 'positions', 'coder-01'),
-      memoryDir: path.join(tmpDir, 'memory', 'coder-01'),
+      workDir: path.join(tmpDir, 'process', 'coder-01'),
+      memoryDir: path.join(tmpDir, 'data', 'coder-01', 'memory'),
       createdAt: Date.now(),
       updatedAt: Date.now(),
       config: workflowPath ? { workflowPath, name: 'coder', description: '', } : undefined,
-    } as Position;
+    } as Process;
   }
 
-  const roleTemplate: RoleTemplate = {
+  const roleTemplate: Program = {
     name: 'coder',
     description: 'A coder',
     workflowPath: 'default.mjs',
@@ -145,7 +145,7 @@ describe('WorkflowRuntime', () => {
     `);
 
     await runtime.execute(
-      makePosition(wfPath),
+      makeProcess(wfPath),
       roleTemplate,
       makeTask(),
     );
@@ -161,7 +161,7 @@ describe('WorkflowRuntime', () => {
       }
     `);
 
-    await runtime.execute(makePosition(wfPath), roleTemplate, makeTask());
+    await runtime.execute(makeProcess(wfPath), roleTemplate, makeTask());
 
     // The workflow sets globalThis.__capturedArgs
     expect(globalThis.__capturedArgs).toEqual({ feature: 'login' });
@@ -175,7 +175,7 @@ describe('WorkflowRuntime', () => {
       }
     `);
 
-    await runtime.execute(makePosition(wfPath), roleTemplate, makeTask());
+    await runtime.execute(makeProcess(wfPath), roleTemplate, makeTask());
     expect(globalThis.__overrideRan).toBe(true);
     delete globalThis.__overrideRan;
   });
@@ -192,7 +192,7 @@ describe('WorkflowRuntime', () => {
     const ac = new AbortController();
     ac.abort();
 
-    await runtime.execute(makePosition(wfPath), roleTemplate, makeTask(), ac);
+    await runtime.execute(makeProcess(wfPath), roleTemplate, makeTask(), ac);
     expect(globalThis.__aborted).toBe(true);
     delete globalThis.__aborted;
   });

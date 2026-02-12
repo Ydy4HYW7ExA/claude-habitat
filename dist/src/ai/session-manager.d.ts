@@ -3,7 +3,7 @@
  * The dispatcher doesn't go through SessionManager (it spawns claude CLI directly).
  */
 import type { AiResult } from './types.js';
-import type { Position, RoleTemplate } from '../position/types.js';
+import type { Process, Program } from '../position/types.js';
 import type { LogFn } from '../types.js';
 import { MessageChannel } from './message-channel.js';
 import { SESSION_STATUS } from '../constants.js';
@@ -29,7 +29,7 @@ export declare class SessionManager {
     private config;
     private sessions;
     constructor(config: SessionManagerConfig);
-    startSession(position: Position, roleTemplate: RoleTemplate, mcpServers: Record<string, unknown>): Promise<SessionHandle>;
+    startSession(position: Process, roleTemplate: Program, mcpServers: Record<string, unknown>): Promise<SessionHandle>;
     private startConsumptionLoop;
     sendAndWait(positionId: string, prompt: string): Promise<AiResult>;
     getSession(positionId: string): SessionHandle | undefined;

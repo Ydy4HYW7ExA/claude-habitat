@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { PositionManager } from '../../src/position/manager.js';
+import { ProcessManager } from '../../src/position/manager.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -42,11 +42,11 @@ function getToolHandler(server: any, toolName: string): Function {
 
 describe('Admin Tool Handlers', () => {
   let tmpDir: string;
-  let positionManager: PositionManager;
+  let positionManager: ProcessManager;
 
   beforeEach(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'admin-test-'));
-    positionManager = new PositionManager(tmpDir);
+    positionManager = new ProcessManager(tmpDir);
   });
 
   afterEach(async () => {
@@ -74,12 +74,12 @@ describe('Admin Tool Handlers', () => {
 
     expect(result.content[0].text).toContain('tester');
 
-    const template = await positionManager.getRoleTemplate('tester');
+    const template = await positionManager.getProgram('tester');
     expect(template).not.toBeNull();
     expect(template!.description).toBe('Test engineer');
 
     const workflowContent = await fs.readFile(
-      path.join(tmpDir, '.claude-habitat/workflows/tester.ts'),
+      path.join(tmpDir, '.claude-habitat/program/app/tester/workflow.mjs'),
       'utf-8',
     );
     expect(workflowContent).toContain('export default');
@@ -103,9 +103,9 @@ describe('Admin Tool Handlers', () => {
 
     expect(result.content[0].text).toContain('coder-01');
 
-    const position = await positionManager.getPosition('coder-01');
+    const position = await positionManager.getProcess('coder-01');
     expect(position).not.toBeNull();
-    expect(position!.roleTemplateName).toBe('coder');
+    expect(position!.programName).toBe('coder');
   });
 
   it('should list positions', async () => {
@@ -146,7 +146,7 @@ describe('Admin Tool Handlers', () => {
     });
 
     expect(result.content[0].text).toContain('deleted');
-    const position = await positionManager.getPosition('coder-01');
+    const position = await positionManager.getProcess('coder-01');
     expect(position).toBeNull();
   });
 
@@ -172,7 +172,7 @@ describe('Admin Tool Handlers', () => {
     expect(result.content[0].text).toContain('updated');
 
     const content = await fs.readFile(
-      path.join(tmpDir, '.claude-habitat/workflows/coder.ts'),
+      path.join(tmpDir, '.claude-habitat/program/app/coder/workflow.mjs'),
       'utf-8',
     );
     expect(content).toContain('v2');
@@ -200,7 +200,7 @@ describe('Admin Tool Handlers', () => {
 
     expect(result.content[0].text).toContain('dispatched');
 
-    const position = await positionManager.getPosition('coder-01');
+    const position = await positionManager.getProcess('coder-01');
     expect(position!.taskQueue).toHaveLength(1);
     expect(position!.taskQueue[0].type).toBe('implement');
     expect(position!.taskQueue[0].priority).toBe(TASK_PRIORITY.HIGH);

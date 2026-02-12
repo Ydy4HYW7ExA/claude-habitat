@@ -1,6 +1,6 @@
 import type { OrchestratorStatus, ConcurrencyConfig } from './types.js';
-import type { Position, Task, RoleTemplate } from '../position/types.js';
-import type { PositionManager } from '../position/manager.js';
+import type { Process, Task, Program } from '../position/types.js';
+import type { ProcessManager } from '../position/manager.js';
 import type { WorkflowRuntime } from '../workflow/runtime.js';
 import type { EventBus } from './event-bus.js';
 import type { HabitatEvent, EventHandler } from './types.js';
@@ -24,7 +24,7 @@ export class Orchestrator {
   private logger: LogFn;
 
   constructor(
-    private positionManager: PositionManager,
+    private positionManager: ProcessManager,
     private workflowRuntime: WorkflowRuntime,
     private eventBus: EventBus,
     private concurrency: ConcurrencyConfig = DEFAULT_CONCURRENCY_CONFIG,
@@ -91,11 +91,11 @@ export class Orchestrator {
   }
 
   async createPosition(
-    roleTemplateName: string,
-    config?: { positionId?: string; overrides?: Partial<RoleTemplate> },
-  ): Promise<Position> {
-    return this.positionManager.createPosition(
-      roleTemplateName,
+    programName: string,
+    config?: { positionId?: string; overrides?: Partial<Program> },
+  ): Promise<Process> {
+    return this.positionManager.createProcess(
+      programName,
       config?.positionId,
       config?.overrides,
     );
@@ -108,20 +108,20 @@ export class Orchestrator {
       ac.abort();
       this.activeExecutions.delete(positionId);
     }
-    await this.positionManager.destroyPosition(positionId);
+    await this.positionManager.destroyProcess(positionId);
   }
 
-  getPosition(positionId: string): Promise<Position | null> {
-    return this.positionManager.getPosition(positionId);
+  getPosition(positionId: string): Promise<Process | null> {
+    return this.positionManager.getProcess(positionId);
   }
 
-  async listPositions(): Promise<Position[]> {
-    return this.positionManager.listPositions();
+  async listPositions(): Promise<Process[]> {
+    return this.positionManager.listProcesses();
   }
 
   async dispatchTask(task: Omit<Task, 'id' | 'status' | 'createdAt'>): Promise<Task> {
     // Validate target position exists before enqueueing
-    const targetPos = await this.positionManager.getPosition(task.targetPositionId);
+    const targetPos = await this.positionManager.getProcess(task.targetPositionId);
     if (!targetPos) {
       throw new Error(`Cannot dispatch task: target position '${task.targetPositionId}' not found`);
     }
@@ -147,15 +147,15 @@ export class Orchestrator {
   }
 
   async triggerPosition(positionId: string): Promise<void> {
-    const position = await this.positionManager.getPosition(positionId);
-    if (!position) throw new Error(`Position not found: ${positionId}`);
+    const position = await this.positionManager.getProcess(positionId);
+    if (!position) throw new Error(`Process not found: ${positionId}`);
     if (position.status === POSITION_STATUS.BUSY) return; // Already running
 
     const task = await this.positionManager.dequeueTask(positionId);
     if (!task) return; // No pending tasks
 
-    const template = await this.positionManager.getRoleTemplate(position.roleTemplateName);
-    if (!template) throw new Error(`Role template not found: ${position.roleTemplateName}`);
+    const template = await this.positionManager.getProgram(position.programName);
+    if (!template) throw new Error(`Program not found: ${position.programName}`);
 
     await this.positionManager.setStatus(positionId, POSITION_STATUS.BUSY);
 
@@ -194,7 +194,7 @@ export class Orchestrator {
         );
 
         // Check for output routes
-        const pos = await this.positionManager.getPosition(positionId);
+        const pos = await this.positionManager.getProcess(positionId);
         if (pos) {
           for (const route of pos.outputRoutes) {
             if (this.matchTaskType(task.type, route.taskType)) {
@@ -239,14 +239,14 @@ export class Orchestrator {
       } finally {
         clearTimeout(timeout);
         this.activeExecutions.delete(positionId);
-        const currentPos = await this.positionManager.getPosition(positionId);
+        const currentPos = await this.positionManager.getProcess(positionId);
         if (currentPos && currentPos.status === POSITION_STATUS.BUSY) {
           await this.positionManager.setStatus(positionId, POSITION_STATUS.IDLE);
         }
 
         // Re-trigger if more pending tasks (don't dequeue here — triggerPosition does it)
         if (this.running) {
-          const pos = await this.positionManager.getPosition(positionId);
+          const pos = await this.positionManager.getProcess(positionId);
           const hasPending = pos?.taskQueue.some(t => t.status === TASK_STATUS.PENDING);
           if (hasPending) {
             this.triggerPosition(positionId).catch((err) => {
@@ -265,7 +265,7 @@ export class Orchestrator {
   }
 
   async getStatus(): Promise<OrchestratorStatus> {
-    const allPositions = await this.positionManager.listPositions();
+    const allPositions = await this.positionManager.listProcesses();
     let pendingTasks = 0;
 
     const positions = allPositions.map(p => {

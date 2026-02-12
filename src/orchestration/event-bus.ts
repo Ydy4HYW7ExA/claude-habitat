@@ -3,7 +3,7 @@ import type { LogFn } from '../types.js';
 import { nanoid } from 'nanoid';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { EVENTS_DIR, NANOID_LENGTH_EVENT, EVENT_WILDCARD, ID_PREFIX, JSONL_EXT } from '../constants.js';
+import { DATA_DIR, SHARED_DATA_ID, NANOID_LENGTH_EVENT, EVENT_WILDCARD, ID_PREFIX, JSONL_EXT } from '../constants.js';
 
 export class EventBus {
   private handlers = new Map<string, Set<EventHandler>>();
@@ -12,7 +12,7 @@ export class EventBus {
   private logger: LogFn;
 
   constructor(baseDir: string, logger?: LogFn) {
-    this.eventsDir = path.join(baseDir, EVENTS_DIR);
+    this.eventsDir = path.join(baseDir, DATA_DIR, SHARED_DATA_ID, 'events');
     this.logger = logger ?? ((level, msg) => {
       if (level === 'error') console.error(msg);
       else console.log(msg);

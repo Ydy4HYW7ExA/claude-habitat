@@ -1,5 +1,5 @@
 import type { MemoryStore } from '../memory/types.js';
-import type { Position, RoleTemplate, Task } from '../position/types.js';
+import type { Process, Program, Task } from '../position/types.js';
 export interface ConversationTurn {
     role: 'user' | 'assistant';
     content: string;
@@ -15,8 +15,8 @@ export interface TodoItem {
     done: boolean;
 }
 export interface AttentionContext {
-    position: Position;
-    roleTemplate: RoleTemplate;
+    position: Process;
+    roleTemplate: Program;
     task: Task;
     workflowSource?: string;
     memoryStore: MemoryStore;

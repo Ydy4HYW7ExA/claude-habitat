@@ -16,7 +16,7 @@ describe('RoleFramingStrategy', () => {
       roleTemplate: {
         name: 'coder',
         description: '高级软件工程师',
-        workflowPath: 'workflows/coder.ts',
+        workflowPath: 'program/app/coder/workflow.mjs',
         systemPromptAppend: '遵循 TDD 开发流程。',
       },
     }));
@@ -47,7 +47,7 @@ describe('RoleFramingStrategy', () => {
       roleTemplate: {
         name: 'coder',
         description: '高级软件工程师',
-        workflowPath: 'workflows/coder.ts',
+        workflowPath: 'program/app/coder/workflow.mjs',
         systemPromptAppend: '遵循 TDD 开发流程。',
       },
     }));

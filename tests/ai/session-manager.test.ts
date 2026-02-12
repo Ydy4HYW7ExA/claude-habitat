@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SessionManager } from '../../src/ai/session-manager.js';
 import { SESSION_STATUS } from '../../src/constants.js';
-import { makePosition, makeRoleTemplate } from '../fixtures/test-helpers.js';
+import { makeProcess, makeProgram } from '../fixtures/test-helpers.js';
 
 // Mock the SDK query() to return an async generator
 vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
@@ -71,8 +71,8 @@ describe('SessionManager', () => {
   });
 
   it('startSession creates a session handle', async () => {
-    const position = makePosition({ id: 'test-pos' });
-    const template = makeRoleTemplate();
+    const position = makeProcess({ id: 'test-pos' });
+    const template = makeProgram();
 
     const handle = await manager.startSession(position, template, {});
     expect(handle.positionId).toBe('test-pos');
@@ -81,8 +81,8 @@ describe('SessionManager', () => {
   });
 
   it('startSession returns existing session if already started', async () => {
-    const position = makePosition({ id: 'test-pos' });
-    const template = makeRoleTemplate();
+    const position = makeProcess({ id: 'test-pos' });
+    const template = makeProgram();
 
     const h1 = await manager.startSession(position, template, {});
     const h2 = await manager.startSession(position, template, {});
@@ -90,8 +90,8 @@ describe('SessionManager', () => {
   });
 
   it('getSession returns the handle', async () => {
-    const position = makePosition({ id: 'test-pos' });
-    const template = makeRoleTemplate();
+    const position = makeProcess({ id: 'test-pos' });
+    const template = makeProgram();
 
     await manager.startSession(position, template, {});
     const handle = manager.getSession('test-pos');
@@ -104,8 +104,8 @@ describe('SessionManager', () => {
   });
 
   it('sendAndWait pushes message and resolves on result', async () => {
-    const position = makePosition({ id: 'test-pos' });
-    const template = makeRoleTemplate();
+    const position = makeProcess({ id: 'test-pos' });
+    const template = makeProgram();
 
     await manager.startSession(position, template, {});
 
@@ -137,8 +137,8 @@ describe('SessionManager', () => {
   });
 
   it('sendAndWait throws if session is busy', async () => {
-    const position = makePosition({ id: 'test-pos' });
-    const template = makeRoleTemplate();
+    const position = makeProcess({ id: 'test-pos' });
+    const template = makeProgram();
 
     const handle = await manager.startSession(position, template, {});
     handle.status = SESSION_STATUS.BUSY;
@@ -147,8 +147,8 @@ describe('SessionManager', () => {
   });
 
   it('sendAndWait throws if session is closed', async () => {
-    const position = makePosition({ id: 'test-pos' });
-    const template = makeRoleTemplate();
+    const position = makeProcess({ id: 'test-pos' });
+    const template = makeProgram();
 
     const handle = await manager.startSession(position, template, {});
     handle.status = SESSION_STATUS.CLOSED;
@@ -157,8 +157,8 @@ describe('SessionManager', () => {
   });
 
   it('stopSession closes the channel and removes session', async () => {
-    const position = makePosition({ id: 'test-pos' });
-    const template = makeRoleTemplate();
+    const position = makeProcess({ id: 'test-pos' });
+    const template = makeProgram();
 
     await manager.startSession(position, template, {});
     await manager.stopSession('test-pos');
@@ -167,9 +167,9 @@ describe('SessionManager', () => {
   });
 
   it('stopAll stops all sessions', async () => {
-    const p1 = makePosition({ id: 'pos-1' });
-    const p2 = makePosition({ id: 'pos-2' });
-    const template = makeRoleTemplate();
+    const p1 = makeProcess({ id: 'pos-1' });
+    const p2 = makeProcess({ id: 'pos-2' });
+    const template = makeProgram();
 
     await manager.startSession(p1, template, {});
     await manager.startSession(p2, template, {});
@@ -181,8 +181,8 @@ describe('SessionManager', () => {
   });
 
   it('stopSession should reject pending sendAndWait promise', async () => {
-    const position = makePosition({ id: 'test-pos' });
-    const template = makeRoleTemplate();
+    const position = makeProcess({ id: 'test-pos' });
+    const template = makeProgram();
 
     await manager.startSession(position, template, {});
 
@@ -227,8 +227,8 @@ describe('SessionManager', () => {
       logger: vi.fn(),
     });
 
-    const position = makePosition({ id: 'crash-pos' });
-    const template = makeRoleTemplate();
+    const position = makeProcess({ id: 'crash-pos' });
+    const template = makeProgram();
 
     await crashManager.startSession(position, template, {});
 

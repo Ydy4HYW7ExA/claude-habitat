@@ -54,7 +54,7 @@ function getToolHandler(server, toolName) {
         throw new Error(`Tool '${toolName}' not found in server`);
     return toolDef.handler;
 }
-describe('Position MCP Tools (memory)', () => {
+describe('Process MCP Tools (memory)', () => {
     let mockMemoryStore;
     let mockGlobalStore;
     let position;
@@ -97,13 +97,13 @@ describe('Position MCP Tools (memory)', () => {
         };
         position = {
             id: 'coder-01',
-            roleTemplateName: 'coder',
+            programName: 'coder',
             status: POSITION_STATUS.IDLE,
             sessionHistory: [],
             taskQueue: [],
             outputRoutes: [],
-            workDir: path.join(tmpDir, 'positions', 'coder-01'),
-            memoryDir: path.join(tmpDir, 'memory', 'coder-01'),
+            workDir: path.join(tmpDir, 'process', 'coder-01'),
+            memoryDir: path.join(tmpDir, 'data', 'coder-01', 'memory'),
             createdAt: Date.now(),
             updatedAt: Date.now(),
         };
@@ -178,7 +178,7 @@ describe('Position MCP Tools (memory)', () => {
         expect(mockGlobalStore.write).toHaveBeenCalled();
     });
 });
-describe('Position MCP Tools (events)', () => {
+describe('Process MCP Tools (events)', () => {
     let tmpDir;
     let eventBus;
     let position;

@@ -1,9 +1,9 @@
 import type { WorkflowContext, AiOptions, AiResult } from './types.js';
 import type { MemoryStore } from '../memory/types.js';
-import type { Position, RoleTemplate, Task } from '../position/types.js';
+import type { Process, Program, Task } from '../position/types.js';
 export interface WorkflowDependencies {
-    position: Position;
-    roleTemplate: RoleTemplate;
+    position: Process;
+    roleTemplate: Program;
     task: Task;
     projectRoot: string;
     memoryStore: MemoryStore;

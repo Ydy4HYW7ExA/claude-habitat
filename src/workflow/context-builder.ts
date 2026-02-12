@@ -1,11 +1,11 @@
 import type { WorkflowContext, AiOptions, AiResult, TodoItem } from './types.js';
 import type { MemoryStore, MemoryEntry } from '../memory/types.js';
-import type { Position, RoleTemplate, Task } from '../position/types.js';
+import type { Process, Program, Task } from '../position/types.js';
 import { truncateSummary, DEFAULT_RECALL_LIMIT, MEMORY_LAYER } from '../constants.js';
 
 export interface WorkflowDependencies {
-  position: Position;
-  roleTemplate: RoleTemplate;
+  position: Process;
+  roleTemplate: Program;
   task: Task;
   projectRoot: string;
   memoryStore: MemoryStore;

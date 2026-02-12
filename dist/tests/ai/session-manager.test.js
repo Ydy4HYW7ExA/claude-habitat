@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SessionManager } from '../../src/ai/session-manager.js';
 import { SESSION_STATUS } from '../../src/constants.js';
-import { makePosition, makeRoleTemplate } from '../fixtures/test-helpers.js';
+import { makeProcess, makeProgram } from '../fixtures/test-helpers.js';
 // Mock the SDK query() to return an async generator
 vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
     query: vi.fn(),
@@ -64,23 +64,23 @@ describe('SessionManager', () => {
         });
     });
     it('startSession creates a session handle', async () => {
-        const position = makePosition({ id: 'test-pos' });
-        const template = makeRoleTemplate();
+        const position = makeProcess({ id: 'test-pos' });
+        const template = makeProgram();
         const handle = await manager.startSession(position, template, {});
         expect(handle.positionId).toBe('test-pos');
         expect(handle.status).toBe(SESSION_STATUS.READY);
         expect(handle.inputChannel).toBeDefined();
     });
     it('startSession returns existing session if already started', async () => {
-        const position = makePosition({ id: 'test-pos' });
-        const template = makeRoleTemplate();
+        const position = makeProcess({ id: 'test-pos' });
+        const template = makeProgram();
         const h1 = await manager.startSession(position, template, {});
         const h2 = await manager.startSession(position, template, {});
         expect(h1).toBe(h2);
     });
     it('getSession returns the handle', async () => {
-        const position = makePosition({ id: 'test-pos' });
-        const template = makeRoleTemplate();
+        const position = makeProcess({ id: 'test-pos' });
+        const template = makeProgram();
         await manager.startSession(position, template, {});
         const handle = manager.getSession('test-pos');
         expect(handle).toBeDefined();
@@ -90,8 +90,8 @@ describe('SessionManager', () => {
         expect(manager.getSession('unknown')).toBeUndefined();
     });
     it('sendAndWait pushes message and resolves on result', async () => {
-        const position = makePosition({ id: 'test-pos' });
-        const template = makeRoleTemplate();
+        const position = makeProcess({ id: 'test-pos' });
+        const template = makeProgram();
         await manager.startSession(position, template, {});
         // Start sendAndWait — it will push to channel and wait for result
         const resultPromise = manager.sendAndWait('test-pos', 'do something');
@@ -117,30 +117,30 @@ describe('SessionManager', () => {
         await expect(manager.sendAndWait('nope', 'hi')).rejects.toThrow('No session for position: nope');
     });
     it('sendAndWait throws if session is busy', async () => {
-        const position = makePosition({ id: 'test-pos' });
-        const template = makeRoleTemplate();
+        const position = makeProcess({ id: 'test-pos' });
+        const template = makeProgram();
         const handle = await manager.startSession(position, template, {});
         handle.status = SESSION_STATUS.BUSY;
         await expect(manager.sendAndWait('test-pos', 'hi')).rejects.toThrow('busy');
     });
     it('sendAndWait throws if session is closed', async () => {
-        const position = makePosition({ id: 'test-pos' });
-        const template = makeRoleTemplate();
+        const position = makeProcess({ id: 'test-pos' });
+        const template = makeProgram();
         const handle = await manager.startSession(position, template, {});
         handle.status = SESSION_STATUS.CLOSED;
         await expect(manager.sendAndWait('test-pos', 'hi')).rejects.toThrow('closed');
     });
     it('stopSession closes the channel and removes session', async () => {
-        const position = makePosition({ id: 'test-pos' });
-        const template = makeRoleTemplate();
+        const position = makeProcess({ id: 'test-pos' });
+        const template = makeProgram();
         await manager.startSession(position, template, {});
         await manager.stopSession('test-pos');
         expect(manager.getSession('test-pos')).toBeUndefined();
     });
     it('stopAll stops all sessions', async () => {
-        const p1 = makePosition({ id: 'pos-1' });
-        const p2 = makePosition({ id: 'pos-2' });
-        const template = makeRoleTemplate();
+        const p1 = makeProcess({ id: 'pos-1' });
+        const p2 = makeProcess({ id: 'pos-2' });
+        const template = makeProgram();
         await manager.startSession(p1, template, {});
         await manager.startSession(p2, template, {});
         await manager.stopAll();
@@ -148,8 +148,8 @@ describe('SessionManager', () => {
         expect(manager.getSession('pos-2')).toBeUndefined();
     });
     it('stopSession should reject pending sendAndWait promise', async () => {
-        const position = makePosition({ id: 'test-pos' });
-        const template = makeRoleTemplate();
+        const position = makeProcess({ id: 'test-pos' });
+        const template = makeProgram();
         await manager.startSession(position, template, {});
         // Start sendAndWait — it will hang waiting for a result
         const resultPromise = manager.sendAndWait('test-pos', 'do something');
@@ -186,8 +186,8 @@ describe('SessionManager', () => {
             defaultMaxBudgetUsd: 1.0,
             logger: vi.fn(),
         });
-        const position = makePosition({ id: 'crash-pos' });
-        const template = makeRoleTemplate();
+        const position = makeProcess({ id: 'crash-pos' });
+        const template = makeProgram();
         await crashManager.startSession(position, template, {});
         // sendAndWait sets up the resolver/rejecter and pushes a message
         const resultPromise = crashManager.sendAndWait('crash-pos', 'hello');

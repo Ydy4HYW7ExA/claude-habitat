@@ -1,6 +1,6 @@
 import type { OrchestratorStatus, ConcurrencyConfig } from './types.js';
-import type { Position, Task, RoleTemplate } from '../position/types.js';
-import type { PositionManager } from '../position/manager.js';
+import type { Process, Task, Program } from '../position/types.js';
+import type { ProcessManager } from '../position/manager.js';
 import type { WorkflowRuntime } from '../workflow/runtime.js';
 import type { EventBus } from './event-bus.js';
 import type { SessionManager } from '../ai/session-manager.js';
@@ -21,16 +21,16 @@ export declare class Orchestrator {
     private totalCostUsd;
     private wildcardHandler;
     private logger;
-    constructor(positionManager: PositionManager, workflowRuntime: WorkflowRuntime, eventBus: EventBus, concurrency?: ConcurrencyConfig, sessionManager?: SessionManager | undefined, memoryStoreGetter?: ((positionId: string) => MemoryStore) | undefined, logger?: LogFn);
+    constructor(positionManager: ProcessManager, workflowRuntime: WorkflowRuntime, eventBus: EventBus, concurrency?: ConcurrencyConfig, sessionManager?: SessionManager | undefined, memoryStoreGetter?: ((positionId: string) => MemoryStore) | undefined, logger?: LogFn);
     start(): Promise<void>;
     stop(): Promise<void>;
-    createPosition(roleTemplateName: string, config?: {
+    createPosition(programName: string, config?: {
         positionId?: string;
-        overrides?: Partial<RoleTemplate>;
-    }): Promise<Position>;
+        overrides?: Partial<Program>;
+    }): Promise<Process>;
     destroyPosition(positionId: string): Promise<void>;
-    getPosition(positionId: string): Promise<Position | null>;
-    listPositions(): Promise<Position[]>;
+    getPosition(positionId: string): Promise<Process | null>;
+    listPositions(): Promise<Process[]>;
     dispatchTask(task: Omit<Task, 'id' | 'status' | 'createdAt'>): Promise<Task>;
     triggerPosition(positionId: string): Promise<void>;
     getStatus(): Promise<OrchestratorStatus>;

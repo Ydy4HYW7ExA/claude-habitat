@@ -1,4 +1,4 @@
-import { PositionManager } from '../position/manager.js';
+import { ProcessManager } from '../position/manager.js';
 import { FileMemoryStoreFactory } from '../memory/factory.js';
 import { WorkflowRuntime } from '../workflow/runtime.js';
 import { SessionManager } from '../ai/session-manager.js';
@@ -7,7 +7,7 @@ import { Orchestrator } from '../orchestration/orchestrator.js';
 import type { LogFn } from '../types.js';
 export type { LogFn } from '../types.js';
 export interface HabitatRuntime {
-    positionManager: PositionManager;
+    positionManager: ProcessManager;
     memoryFactory: FileMemoryStoreFactory;
     eventBus: EventBus;
     orchestrator: Orchestrator;

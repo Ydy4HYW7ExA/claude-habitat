@@ -1,5 +1,5 @@
 import type { MemoryStore, MemoryEntry } from '../memory/types.js';
-import type { Position } from '../position/types.js';
+import type { Process } from '../position/types.js';
 import type { EventBus } from '../orchestration/event-bus.js';
 import {
   truncateSummary, DEFAULT_RECALL_LIMIT, MCP_SERVER_PREFIX, CONFIG_VERSION,
@@ -15,7 +15,7 @@ export interface PositionMcpDeps {
   memoryStore: MemoryStore;
   globalMemoryStore: MemoryStore;
   eventBus: EventBus;
-  position: Position;
+  position: Process;
 }
 
 /**

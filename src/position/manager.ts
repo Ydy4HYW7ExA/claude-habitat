@@ -1,68 +1,68 @@
 import type {
-  Position,
-  RoleTemplate,
+  Process,
+  Program,
   Task,
   OutputRoute,
-  PositionStatus,
+  ProcessStatus,
 } from './types.js';
-import { FilePositionStore, FileRoleTemplateStore } from './store.js';
+import { FileProcessStore, FileProgramStore } from './store.js';
 import { nanoid } from 'nanoid';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import {
-  POSITIONS_DIR, MEMORY_DIR, RULES_SUBDIR, SKILLS_SUBDIR,
+  PROCESS_DIR, DATA_DIR, RULES_SUBDIR, SKILLS_SUBDIR,
   SESSIONS_SUBDIR, HISTORY_FILE, CLAUDE_MD_FILE,
   NANOID_LENGTH_POSITION, NANOID_LENGTH_TASK,
   POSITION_STATUS, TASK_STATUS, PRIORITY_ORDER, ID_PREFIX,
   PROMPT,
 } from '../constants.js';
 
-export class PositionManager {
-  private positionStore: FilePositionStore;
-  private roleTemplateStore: FileRoleTemplateStore;
+export class ProcessManager {
+  private processStore: FileProcessStore;
+  private programStore: FileProgramStore;
 
   constructor(private baseDir: string) {
-    this.positionStore = new FilePositionStore(baseDir);
-    this.roleTemplateStore = new FileRoleTemplateStore(baseDir);
+    this.processStore = new FileProcessStore(baseDir);
+    this.programStore = new FileProgramStore(baseDir);
   }
 
-  // --- Role Template Management ---
+  // --- Program Management ---
 
-  async registerRoleTemplate(template: RoleTemplate): Promise<void> {
-    await this.roleTemplateStore.save(template);
+  async registerProgram(program: Program): Promise<void> {
+    await this.programStore.save(program);
   }
 
-  async getRoleTemplate(name: string): Promise<RoleTemplate | null> {
-    return this.roleTemplateStore.load(name);
+  async getProgram(name: string): Promise<Program | null> {
+    return this.programStore.load(name);
   }
 
-  async listRoleTemplates(): Promise<RoleTemplate[]> {
-    return this.roleTemplateStore.loadAll();
+  async listPrograms(): Promise<Program[]> {
+    return this.programStore.loadAll();
   }
 
-  async deleteRoleTemplate(name: string): Promise<void> {
-    await this.roleTemplateStore.delete(name);
+  async deleteProgram(name: string): Promise<void> {
+    await this.programStore.delete(name);
   }
 
-  // --- Position Management ---
+  // --- Process Management ---
 
-  async createPosition(
-    roleTemplateName: string,
-    positionId?: string,
-    configOverrides?: Partial<RoleTemplate>,
-  ): Promise<Position> {
-    const template = await this.roleTemplateStore.load(roleTemplateName);
-    if (!template) {
-      throw new Error(`Role template not found: ${roleTemplateName}`);
+  async createProcess(
+    programName: string,
+    processId?: string,
+    configOverrides?: Partial<Program>,
+  ): Promise<Process> {
+    const program = await this.programStore.load(programName);
+    if (!program) {
+      throw new Error(`Program not found: ${programName}`);
     }
 
-    const id = positionId ?? `${roleTemplateName}-${nanoid(NANOID_LENGTH_POSITION)}`;
-    const workDir = path.join(this.baseDir, POSITIONS_DIR, id);
-    const memoryDir = path.join(this.baseDir, MEMORY_DIR, id);
+    const id = processId ?? `${programName}-${nanoid(NANOID_LENGTH_POSITION)}`;
+    const workDir = path.join(this.baseDir, PROCESS_DIR, id);
+    const memoryDir = path.join(this.baseDir, DATA_DIR, id, 'memory');
 
-    const position: Position = {
+    const process: Process = {
       id,
-      roleTemplateName,
+      programName,
       status: POSITION_STATUS.IDLE,
       sessionHistory: [],
       taskQueue: [],
@@ -74,19 +74,19 @@ export class PositionManager {
       updatedAt: Date.now(),
     };
 
-    // Create position directory structure
+    // Create process directory structure
     await fs.mkdir(workDir, { recursive: true });
     await fs.mkdir(path.join(workDir, RULES_SUBDIR), { recursive: true });
     await fs.mkdir(path.join(workDir, SKILLS_SUBDIR), { recursive: true });
     await fs.mkdir(path.join(workDir, SESSIONS_SUBDIR), { recursive: true });
     await fs.mkdir(memoryDir, { recursive: true });
 
-    // Generate CLAUDE.md from template
-    await this.generateClaudeMd(position, template);
+    // Generate CLAUDE.md from program
+    await this.generateClaudeMd(process, program);
 
     // Generate rules if defined
-    if (template.rules) {
-      for (const rule of template.rules) {
+    if (program.rules) {
+      for (const rule of program.rules) {
         const rulePath = path.join(workDir, RULES_SUBDIR, `${rule.name}.md`);
         const frontmatter = rule.paths.length > 0
           ? `---\npaths:\n${rule.paths.map(p => `  - ${p}`).join('\n')}\n---\n\n`
@@ -102,47 +102,47 @@ export class PositionManager {
     );
 
     // Persist
-    await this.positionStore.save(position);
+    await this.processStore.save(process);
 
-    return position;
+    return process;
   }
 
-  async getPosition(id: string): Promise<Position | null> {
-    return this.positionStore.load(id);
+  async getProcess(id: string): Promise<Process | null> {
+    return this.processStore.load(id);
   }
 
-  async listPositions(): Promise<Position[]> {
-    return this.positionStore.loadAll();
+  async listProcesses(): Promise<Process[]> {
+    return this.processStore.loadAll();
   }
 
-  async updatePosition(id: string, patch: Partial<Position>): Promise<Position> {
-    const pos = await this.getPosition(id);
-    if (!pos) throw new Error(`Position not found: ${id}`);
+  async updateProcess(id: string, patch: Partial<Process>): Promise<Process> {
+    const proc = await this.getProcess(id);
+    if (!proc) throw new Error(`Process not found: ${id}`);
 
-    const updated: Position = {
-      ...pos,
+    const updated: Process = {
+      ...proc,
       ...patch,
-      id: pos.id, // prevent id change
+      id: proc.id, // prevent id change
       updatedAt: Date.now(),
     };
 
-    await this.positionStore.save(updated);
+    await this.processStore.save(updated);
     return updated;
   }
 
-  async setStatus(id: string, status: PositionStatus): Promise<void> {
-    await this.updatePosition(id, { status });
+  async setStatus(id: string, status: ProcessStatus): Promise<void> {
+    await this.updateProcess(id, { status });
   }
 
-  async destroyPosition(id: string): Promise<void> {
-    await this.positionStore.delete(id);
+  async destroyProcess(id: string): Promise<void> {
+    await this.processStore.delete(id);
   }
 
   // --- Task Management ---
 
-  async enqueueTask(positionId: string, task: Omit<Task, 'id' | 'status' | 'createdAt'>): Promise<Task> {
-    const pos = await this.getPosition(positionId);
-    if (!pos) throw new Error(`Position not found: ${positionId}`);
+  async enqueueTask(processId: string, task: Omit<Task, 'id' | 'status' | 'createdAt'>): Promise<Task> {
+    const proc = await this.getProcess(processId);
+    if (!proc) throw new Error(`Process not found: ${processId}`);
 
     const fullTask: Task = {
       ...task,
@@ -151,17 +151,17 @@ export class PositionManager {
       createdAt: Date.now(),
     };
 
-    pos.taskQueue.push(fullTask);
-    await this.positionStore.save(pos);
+    proc.taskQueue.push(fullTask);
+    await this.processStore.save(proc);
     return fullTask;
   }
 
-  async dequeueTask(positionId: string): Promise<Task | null> {
-    const pos = await this.getPosition(positionId);
-    if (!pos) return null;
+  async dequeueTask(processId: string): Promise<Task | null> {
+    const proc = await this.getProcess(processId);
+    if (!proc) return null;
 
     // Sort by priority, then by creation time
-    const pending = pos.taskQueue
+    const pending = proc.taskQueue
       .filter(t => t.status === TASK_STATUS.PENDING)
       .sort((a, b) => {
         const pd = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
@@ -172,71 +172,71 @@ export class PositionManager {
 
     const task = pending[0];
     task.status = TASK_STATUS.RUNNING;
-    pos.currentTask = task;
-    await this.positionStore.save(pos);
+    proc.currentTask = task;
+    await this.processStore.save(proc);
     return task;
   }
 
-  async completeTask(positionId: string, taskId: string, result: unknown): Promise<void> {
-    const pos = await this.getPosition(positionId);
-    if (!pos) throw new Error(`Position not found: ${positionId}`);
+  async completeTask(processId: string, taskId: string, result: unknown): Promise<void> {
+    const proc = await this.getProcess(processId);
+    if (!proc) throw new Error(`Process not found: ${processId}`);
 
-    const task = pos.taskQueue.find(t => t.id === taskId);
+    const task = proc.taskQueue.find(t => t.id === taskId);
     if (!task) throw new Error(`Task not found: ${taskId}`);
 
     task.status = TASK_STATUS.DONE;
     task.result = result;
     task.completedAt = Date.now();
 
-    if (pos.currentTask?.id === taskId) {
-      pos.currentTask = undefined;
+    if (proc.currentTask?.id === taskId) {
+      proc.currentTask = undefined;
     }
 
-    await this.positionStore.save(pos);
+    await this.processStore.save(proc);
   }
 
-  async failTask(positionId: string, taskId: string, error: unknown): Promise<void> {
-    const pos = await this.getPosition(positionId);
-    if (!pos) throw new Error(`Position not found: ${positionId}`);
+  async failTask(processId: string, taskId: string, error: unknown): Promise<void> {
+    const proc = await this.getProcess(processId);
+    if (!proc) throw new Error(`Process not found: ${processId}`);
 
-    const task = pos.taskQueue.find(t => t.id === taskId);
+    const task = proc.taskQueue.find(t => t.id === taskId);
     if (!task) throw new Error(`Task not found: ${taskId}`);
 
     task.status = TASK_STATUS.FAILED;
     task.result = error;
     task.completedAt = Date.now();
 
-    if (pos.currentTask?.id === taskId) {
-      pos.currentTask = undefined;
+    if (proc.currentTask?.id === taskId) {
+      proc.currentTask = undefined;
     }
 
-    await this.positionStore.save(pos);
+    await this.processStore.save(proc);
   }
 
   // --- Output Routes ---
 
-  async addOutputRoute(positionId: string, route: OutputRoute): Promise<void> {
-    const pos = await this.getPosition(positionId);
-    if (!pos) throw new Error(`Position not found: ${positionId}`);
+  async addOutputRoute(processId: string, route: OutputRoute): Promise<void> {
+    const proc = await this.getProcess(processId);
+    if (!proc) throw new Error(`Process not found: ${processId}`);
 
-    pos.outputRoutes.push(route);
-    await this.positionStore.save(pos);
+    proc.outputRoutes.push(route);
+    await this.processStore.save(proc);
   }
 
   // --- Helpers ---
 
-  private async generateClaudeMd(position: Position, template: RoleTemplate): Promise<void> {
+  private async generateClaudeMd(process: Process, program: Program): Promise<void> {
     const lines: string[] = [
-      PROMPT.CLAUDE_MD_TITLE(position.id),
+      PROMPT.CLAUDE_MD_TITLE(process.id),
       '',
-      PROMPT.CLAUDE_MD_ROLE(template.name),
+      PROMPT.CLAUDE_MD_ROLE(program.name),
       '',
-      template.description,
+      program.description,
       '',
     ];
 
-    if (template.systemPromptAppend) {
-      lines.push(PROMPT.SUPPLEMENTARY_HEADER, '', template.systemPromptAppend, '');
+    if (program.systemPromptAppend) {
+      lines.push(PROMPT.SUPPLEMENTARY_HEADER, '', program.systemPromptAppend, '');
     }
 
     lines.push(
@@ -246,6 +246,6 @@ export class PositionManager {
       '',
     );
 
-    await fs.writeFile(path.join(position.workDir, CLAUDE_MD_FILE), lines.join('\n'));
+    await fs.writeFile(path.join(process.workDir, CLAUDE_MD_FILE), lines.join('\n'));
   }
 }

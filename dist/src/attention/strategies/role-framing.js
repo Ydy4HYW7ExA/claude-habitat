@@ -1,7 +1,7 @@
 import { MAX_PAYLOAD_DISPLAY_LENGTH, PROMPT } from '../../constants.js';
 /**
  * Priority 10 — Injects role framing into system prompt.
- * Sources: RoleTemplate.systemPromptAppend + position context + todo items.
+ * Sources: Program.systemPromptAppend + position context + todo items.
  */
 export class RoleFramingStrategy {
     name = 'role-framing';

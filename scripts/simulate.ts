@@ -18,8 +18,8 @@ import { FileMemoryStoreFactory } from '../src/memory/factory.js';
 import { MockWorkflowRuntime } from './lib/mock-runtime.js';
 import { EventViewer } from './lib/event-viewer.js';
 import {
-  HABITAT_DIR, ROLES_DIR, WORKFLOW_DIR, POSITIONS_DIR,
-  MEMORY_DIR, EVENTS_DIR, LOGS_DIR, GLOBAL_MEMORY_ID,
+  HABITAT_DIR, PROGRAM_DIR, PROGRAM_APP_DIR,
+  DATA_DIR, SHARED_DATA_ID, PROCESS_DIR,
   ENTRIES_SUBDIR, CONFIG_FILE, INDEX_FILE, META_FILE, LINKS_FILE,
   DEFAULT_CONCURRENCY_CONFIG, CONFIG_VERSION,
   TASK_STATUS,
@@ -55,12 +55,11 @@ async function createTempHabitat(): Promise<string> {
 
   const dirs = [
     habitatDir,
-    path.join(habitatDir, ROLES_DIR),
-    path.join(habitatDir, WORKFLOW_DIR),
-    path.join(habitatDir, POSITIONS_DIR),
-    path.join(habitatDir, MEMORY_DIR, GLOBAL_MEMORY_ID, ENTRIES_SUBDIR),
-    path.join(habitatDir, EVENTS_DIR),
-    path.join(habitatDir, LOGS_DIR),
+    path.join(habitatDir, PROGRAM_DIR, PROGRAM_APP_DIR),
+    path.join(habitatDir, DATA_DIR, SHARED_DATA_ID, 'memory', ENTRIES_SUBDIR),
+    path.join(habitatDir, DATA_DIR, SHARED_DATA_ID, 'events'),
+    path.join(habitatDir, DATA_DIR, SHARED_DATA_ID, 'logs'),
+    path.join(habitatDir, PROCESS_DIR),
   ];
 
   for (const dir of dirs) {
@@ -75,15 +74,15 @@ async function createTempHabitat(): Promise<string> {
 
   // Global memory bootstrap files
   await fs.writeFile(
-    path.join(habitatDir, MEMORY_DIR, GLOBAL_MEMORY_ID, INDEX_FILE),
+    path.join(habitatDir, DATA_DIR, SHARED_DATA_ID, 'memory', INDEX_FILE),
     JSON.stringify(createEmptyIndex(), null, 2),
   );
   await fs.writeFile(
-    path.join(habitatDir, MEMORY_DIR, GLOBAL_MEMORY_ID, META_FILE),
+    path.join(habitatDir, DATA_DIR, SHARED_DATA_ID, 'memory', META_FILE),
     JSON.stringify(createEmptyMeta(), null, 2),
   );
   await fs.writeFile(
-    path.join(habitatDir, MEMORY_DIR, LINKS_FILE),
+    path.join(habitatDir, DATA_DIR, SHARED_DATA_ID, LINKS_FILE),
     '[]',
   );
 
@@ -96,30 +95,35 @@ async function registerRoles(pm: PositionManager, projectRoot: string): Promise<
     {
       name: 'intake-clerk',
       description: '文档接收员 — 接收文档，提取元数据，转发给审核员',
-      workflowPath: path.join(HABITAT_DIR, WORKFLOW_DIR, 'intake.mjs'),
+      workflowPath: path.join(HABITAT_DIR, PROGRAM_DIR, PROGRAM_APP_DIR, 'intake-clerk', 'workflow.mjs'),
     },
     {
       name: 'reviewer',
       description: '文档审核员 — 校验元数据，记录审核结果，转发给归档员',
-      workflowPath: path.join(HABITAT_DIR, WORKFLOW_DIR, 'reviewer.mjs'),
+      workflowPath: path.join(HABITAT_DIR, PROGRAM_DIR, PROGRAM_APP_DIR, 'reviewer', 'workflow.mjs'),
     },
     {
       name: 'archiver',
       description: '文档归档员 — 归档到本地记忆和全局记忆',
-      workflowPath: path.join(HABITAT_DIR, WORKFLOW_DIR, 'archiver.mjs'),
+      workflowPath: path.join(HABITAT_DIR, PROGRAM_DIR, PROGRAM_APP_DIR, 'archiver', 'workflow.mjs'),
     },
   ];
 
   for (const t of templates) {
-    await pm.registerRoleTemplate(t);
+    await pm.registerProgram(t);
   }
 }
 
 // ─── Step 3: Write workflow .mjs files ───────────────────────────────
 async function writeWorkflows(projectRoot: string): Promise<void> {
-  const workflowDir = path.join(projectRoot, HABITAT_DIR, WORKFLOW_DIR);
+  const appDir = path.join(projectRoot, HABITAT_DIR, PROGRAM_DIR, PROGRAM_APP_DIR);
 
-  await fs.writeFile(path.join(workflowDir, 'intake.mjs'), `
+  // Create program directories and write workflows
+  for (const name of ['intake-clerk', 'reviewer', 'archiver']) {
+    await fs.mkdir(path.join(appDir, name), { recursive: true });
+  }
+
+  await fs.writeFile(path.join(appDir, 'intake-clerk', 'workflow.mjs'), `
 export default async function intake(ctx) {
   const doc = ctx.args;
   ctx.log('info', '[intake] 处理文档: ' + doc.title);
@@ -140,7 +144,7 @@ export default async function intake(ctx) {
 }
 `.trimStart());
 
-  await fs.writeFile(path.join(workflowDir, 'reviewer.mjs'), `
+  await fs.writeFile(path.join(appDir, 'reviewer', 'workflow.mjs'), `
 export default async function reviewer(ctx) {
   const { originalDoc, metadata } = ctx.args;
   ctx.log('info', '[reviewer] 审核文档: ' + metadata.title);
@@ -164,7 +168,7 @@ export default async function reviewer(ctx) {
 }
 `.trimStart());
 
-  await fs.writeFile(path.join(workflowDir, 'archiver.mjs'), `
+  await fs.writeFile(path.join(appDir, 'archiver', 'workflow.mjs'), `
 export default async function archiver(ctx) {
   const { metadata, review } = ctx.args;
   ctx.log('info', '[archiver] 归档文档: ' + metadata.title);
@@ -191,7 +195,7 @@ async function waitForCompletion(
   const pollInterval = 200;
 
   while (Date.now() - start < timeoutMs) {
-    const archiver = await pm.getPosition('archiver');
+    const archiver = await pm.getProcess('archiver');
     if (archiver) {
       const done = archiver.taskQueue.some(t => t.status === TASK_STATUS.DONE);
       if (done) return true;
@@ -220,7 +224,7 @@ async function main() {
 
     const pm = new PositionManager(habitatDir);
     const eventBus = new EventBus(habitatDir, logger as any);
-    const memoryFactory = new FileMemoryStoreFactory(path.join(habitatDir, MEMORY_DIR));
+    const memoryFactory = new FileMemoryStoreFactory(path.join(habitatDir, DATA_DIR));
     const globalMemoryStore = memoryFactory.getGlobalStore();
 
     // Register roles
@@ -334,7 +338,7 @@ async function main() {
     console.log(`  总事件数:       ${collected.length}`);
 
     // Replay from JSONL
-    const eventsDir = path.join(habitatDir, EVENTS_DIR);
+    const eventsDir = path.join(habitatDir, DATA_DIR, SHARED_DATA_ID, 'events');
     try {
       const files = await fs.readdir(eventsDir);
       const jsonlFile = files.find(f => f.endsWith('.jsonl'));

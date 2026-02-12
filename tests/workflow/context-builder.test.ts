@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { buildWorkflowContext, type WorkflowDependencies } from '../../src/workflow/context-builder.js';
 import type { MemoryEntry } from '../../src/memory/types.js';
-import { TEST_BASE, mockMemoryStore, makePosition, makeRoleTemplate, makeTask } from '../fixtures/test-helpers.js';
+import { TEST_BASE, mockMemoryStore, makeProcess, makeProgram, makeTask } from '../fixtures/test-helpers.js';
 import { MEMORY_LAYER } from '../../src/constants.js';
 import * as path from 'node:path';
 
@@ -17,8 +17,8 @@ function makeDeps(overrides?: Partial<WorkflowDependencies>): WorkflowDependenci
   });
 
   return {
-    position: makePosition(),
-    roleTemplate: makeRoleTemplate(),
+    position: makeProcess(),
+    roleTemplate: makeProgram(),
     task: makeTask(),
     projectRoot: path.join(TEST_BASE, 'project'),
     memoryStore: store,

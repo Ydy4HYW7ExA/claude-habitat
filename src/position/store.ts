@@ -1,22 +1,22 @@
-import type { Position, PositionStore, RoleTemplate, RoleTemplateStore } from './types.js';
+import type { Process, ProcessStore, Program, ProgramStore } from './types.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { POSITIONS_DIR, ROLES_DIR, STATE_FILE } from '../constants.js';
+import { PROCESS_DIR, PROGRAM_DIR, PROGRAM_APP_DIR, MANIFEST_FILE, STATE_FILE } from '../constants.js';
 
-export class FilePositionStore implements PositionStore {
+export class FileProcessStore implements ProcessStore {
   constructor(private baseDir: string) {}
 
-  private positionPath(id: string): string {
-    return path.join(this.baseDir, POSITIONS_DIR, id, STATE_FILE);
+  private processPath(id: string): string {
+    return path.join(this.baseDir, PROCESS_DIR, id, STATE_FILE);
   }
 
-  async save(position: Position): Promise<void> {
-    const filePath = this.positionPath(position.id);
+  async save(process: Process): Promise<void> {
+    const filePath = this.processPath(process.id);
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     // Serialize without function fields (outputRoutes transform/condition are runtime-only)
     const serializable = {
-      ...position,
-      outputRoutes: position.outputRoutes.map(r => ({
+      ...process,
+      outputRoutes: process.outputRoutes.map(r => ({
         taskType: r.taskType,
         targetPositionId: r.targetPositionId,
         // Preserve function names as string references for debugging/logging
@@ -27,80 +27,77 @@ export class FilePositionStore implements PositionStore {
     await fs.writeFile(filePath, JSON.stringify(serializable, null, 2));
   }
 
-  async load(positionId: string): Promise<Position | null> {
+  async load(processId: string): Promise<Process | null> {
     try {
-      const data = await fs.readFile(this.positionPath(positionId), 'utf-8');
-      return JSON.parse(data) as Position;
+      const data = await fs.readFile(this.processPath(processId), 'utf-8');
+      const parsed = JSON.parse(data);
+      return parsed as Process;
     } catch {
       return null;
     }
   }
 
-  async loadAll(): Promise<Position[]> {
-    const positionsDir = path.join(this.baseDir, POSITIONS_DIR);
+  async loadAll(): Promise<Process[]> {
+    const processDir = path.join(this.baseDir, PROCESS_DIR);
     try {
-      const dirs = await fs.readdir(positionsDir);
-      const positions: Position[] = [];
+      const dirs = await fs.readdir(processDir);
+      const processes: Process[] = [];
       for (const dir of dirs) {
-        const pos = await this.load(dir);
-        if (pos) positions.push(pos);
+        const proc = await this.load(dir);
+        if (proc) processes.push(proc);
       }
-      return positions;
+      return processes;
     } catch {
       return [];
     }
   }
 
-  async delete(positionId: string): Promise<void> {
-    const dir = path.join(this.baseDir, POSITIONS_DIR, positionId);
+  async delete(processId: string): Promise<void> {
+    const dir = path.join(this.baseDir, PROCESS_DIR, processId);
     await fs.rm(dir, { recursive: true, force: true });
   }
 }
 
-export class FileRoleTemplateStore implements RoleTemplateStore {
+export class FileProgramStore implements ProgramStore {
   constructor(private baseDir: string) {}
 
-  private templatePath(name: string): string {
-    return path.join(this.baseDir, ROLES_DIR, `${name}.json`);
+  private programPath(name: string): string {
+    return path.join(this.baseDir, PROGRAM_DIR, PROGRAM_APP_DIR, name, MANIFEST_FILE);
   }
 
-  async save(template: RoleTemplate): Promise<void> {
-    const filePath = this.templatePath(template.name);
+  async save(program: Program): Promise<void> {
+    const filePath = this.programPath(program.name);
     await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, JSON.stringify(template, null, 2));
+    await fs.writeFile(filePath, JSON.stringify(program, null, 2));
   }
 
-  async load(name: string): Promise<RoleTemplate | null> {
+  async load(name: string): Promise<Program | null> {
     try {
-      const data = await fs.readFile(this.templatePath(name), 'utf-8');
-      return JSON.parse(data) as RoleTemplate;
+      const data = await fs.readFile(this.programPath(name), 'utf-8');
+      return JSON.parse(data) as Program;
     } catch {
       return null;
     }
   }
 
-  async loadAll(): Promise<RoleTemplate[]> {
-    const rolesDir = path.join(this.baseDir, ROLES_DIR);
+  async loadAll(): Promise<Program[]> {
+    const appDir = path.join(this.baseDir, PROGRAM_DIR, PROGRAM_APP_DIR);
     try {
-      const files = await fs.readdir(rolesDir);
-      const templates: RoleTemplate[] = [];
-      for (const file of files) {
-        if (!file.endsWith('.json')) continue;
-        const name = path.basename(file, '.json');
-        const tmpl = await this.load(name);
-        if (tmpl) templates.push(tmpl);
+      const entries = await fs.readdir(appDir, { withFileTypes: true });
+      const programs: Program[] = [];
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const prog = await this.load(entry.name);
+        if (prog) programs.push(prog);
       }
-      return templates;
+      return programs;
     } catch {
       return [];
     }
   }
 
   async delete(name: string): Promise<void> {
-    try {
-      await fs.unlink(this.templatePath(name));
-    } catch {
-      // ignore if not found
-    }
+    const dir = path.join(this.baseDir, PROGRAM_DIR, PROGRAM_APP_DIR, name);
+    await fs.rm(dir, { recursive: true, force: true });
   }
 }

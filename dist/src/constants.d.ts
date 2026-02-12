@@ -1,13 +1,13 @@
 /** Root directory name for habitat runtime data */
 export declare const HABITAT_DIR = ".claude-habitat";
-/** Subdirectory names within HABITAT_DIR */
-export declare const ROLES_DIR = "roles";
-export declare const WORKFLOW_DIR = "workflows";
-export declare const POSITIONS_DIR = "positions";
-export declare const MEMORY_DIR = "memory";
-export declare const EVENTS_DIR = "events";
-export declare const LOGS_DIR = "logs";
-export declare const GLOBAL_MEMORY_ID = "_global";
+/** New directory structure: program/data/process */
+export declare const PROGRAM_DIR = "program";
+export declare const PROGRAM_SDK_DIR = "sdk";
+export declare const PROGRAM_APP_DIR = "app";
+export declare const DATA_DIR = "data";
+export declare const SHARED_DATA_ID = "_shared";
+export declare const PROCESS_DIR = "process";
+export declare const MANIFEST_FILE = "manifest.json";
 export declare const LINKS_FILE = "_links.json";
 /** Position subdirectory names */
 export declare const ENTRIES_SUBDIR = "entries";

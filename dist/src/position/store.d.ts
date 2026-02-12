@@ -1,20 +1,20 @@
-import type { Position, PositionStore, RoleTemplate, RoleTemplateStore } from './types.js';
-export declare class FilePositionStore implements PositionStore {
+import type { Process, ProcessStore, Program, ProgramStore } from './types.js';
+export declare class FileProcessStore implements ProcessStore {
     private baseDir;
     constructor(baseDir: string);
-    private positionPath;
-    save(position: Position): Promise<void>;
-    load(positionId: string): Promise<Position | null>;
-    loadAll(): Promise<Position[]>;
-    delete(positionId: string): Promise<void>;
+    private processPath;
+    save(process: Process): Promise<void>;
+    load(processId: string): Promise<Process | null>;
+    loadAll(): Promise<Process[]>;
+    delete(processId: string): Promise<void>;
 }
-export declare class FileRoleTemplateStore implements RoleTemplateStore {
+export declare class FileProgramStore implements ProgramStore {
     private baseDir;
     constructor(baseDir: string);
-    private templatePath;
-    save(template: RoleTemplate): Promise<void>;
-    load(name: string): Promise<RoleTemplate | null>;
-    loadAll(): Promise<RoleTemplate[]>;
+    private programPath;
+    save(program: Program): Promise<void>;
+    load(name: string): Promise<Program | null>;
+    loadAll(): Promise<Program[]>;
     delete(name: string): Promise<void>;
 }
 //# sourceMappingURL=store.d.ts.map

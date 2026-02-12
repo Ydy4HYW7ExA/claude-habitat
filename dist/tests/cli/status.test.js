@@ -27,10 +27,10 @@ describe('CLI status', () => {
         const output = consoleSpy.mock.calls.map(c => c[0]).join('\n');
         expect(output).toContain('(none)');
     });
-    it('should show role templates', async () => {
+    it('should show programs', async () => {
         await status(tmpDir);
         const output = consoleSpy.mock.calls.map(c => c[0]).join('\n');
-        expect(output).toContain('Role Templates');
+        expect(output).toContain('Programs');
     });
     it('should show global memory section', async () => {
         await status(tmpDir);

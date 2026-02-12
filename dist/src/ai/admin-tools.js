@@ -1,6 +1,6 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { WORKFLOW_DIR, HABITAT_DIR, ORG_ARCHITECT_ID, MCP_ADMIN_SERVER_NAME, CONFIG_VERSION, ADMIN_TOOL_NAME, MODELS, TASK_PRIORITY, ADMIN_SAFE_FIELDS, mcpText, } from '../constants.js';
+import { PROGRAM_DIR, PROGRAM_APP_DIR, HABITAT_DIR, ORG_ARCHITECT_ID, MCP_ADMIN_SERVER_NAME, CONFIG_VERSION, ADMIN_TOOL_NAME, MODELS, TASK_PRIORITY, ADMIN_SAFE_FIELDS, mcpText, } from '../constants.js';
 /**
  * Creates an MCP server with admin tools (org-architect only).
  * Uses SDK's tool() and createSdkMcpServer() for proper registration.
@@ -19,10 +19,10 @@ export async function createAdminMcpServer(deps) {
             allowedTools: z.array(z.string()).optional().describe('允许的工具列表'),
             disallowedTools: z.array(z.string()).optional().describe('禁止的工具列表'),
         }, async ({ name, description, workflowCode, systemPromptAppend, model, allowedTools, disallowedTools }) => {
-            const workflowPath = path.join(HABITAT_DIR, WORKFLOW_DIR, `${name}.ts`);
-            const fullWorkflowPath = path.join(projectRoot, workflowPath);
-            await fs.mkdir(path.dirname(fullWorkflowPath), { recursive: true });
-            await fs.writeFile(fullWorkflowPath, workflowCode);
+            const programDir = path.join(projectRoot, HABITAT_DIR, PROGRAM_DIR, PROGRAM_APP_DIR, name);
+            const workflowPath = path.join(HABITAT_DIR, PROGRAM_DIR, PROGRAM_APP_DIR, name, 'workflow.mjs');
+            await fs.mkdir(programDir, { recursive: true });
+            await fs.writeFile(path.join(programDir, 'workflow.mjs'), workflowCode);
             const template = {
                 name,
                 description,
@@ -32,15 +32,15 @@ export async function createAdminMcpServer(deps) {
                 allowedTools,
                 disallowedTools,
             };
-            await positionManager.registerRoleTemplate(template);
+            await positionManager.registerProgram(template);
             return { content: [mcpText(`Role template '${name}' created.`)] };
         }),
         tool(ADMIN_TOOL_NAME.CREATE_POSITION, '从模板创建岗位实例', {
-            roleTemplateName: z.string().describe('职业模板名称'),
-            positionId: z.string().optional().describe('自定义岗位 ID'),
+            roleTemplateName: z.string().describe('程序名称'),
+            positionId: z.string().optional().describe('自定义进程 ID'),
         }, async ({ roleTemplateName, positionId }) => {
-            const position = await positionManager.createPosition(roleTemplateName, positionId);
-            return { content: [mcpText(`Position '${position.id}' created from template '${roleTemplateName}'.`)] };
+            const position = await positionManager.createProcess(roleTemplateName, positionId);
+            return { content: [mcpText(`Process '${position.id}' created from program '${roleTemplateName}'.`)] };
         }),
         tool(ADMIN_TOOL_NAME.MODIFY_POSITION, '修改岗位配置', {
             positionId: z.string().describe('岗位 ID'),
@@ -53,14 +53,14 @@ export async function createAdminMcpServer(deps) {
                     filtered[key] = value;
                 }
             }
-            await positionManager.updatePosition(positionId, filtered);
+            await positionManager.updateProcess(positionId, filtered);
             return { content: [mcpText(`Position '${positionId}' updated.`)] };
         }),
         tool(ADMIN_TOOL_NAME.DELETE_POSITION, '删除岗位', {
             positionId: z.string().describe('岗位 ID'),
             reason: z.string().describe('删除原因'),
         }, async ({ positionId, reason }) => {
-            await positionManager.destroyPosition(positionId);
+            await positionManager.destroyProcess(positionId);
             return { content: [mcpText(`Position '${positionId}' deleted. Reason: ${reason}`)] };
         }),
         tool(ADMIN_TOOL_NAME.MODIFY_WORKFLOW, '修改岗位工作流代码', {
@@ -68,13 +68,13 @@ export async function createAdminMcpServer(deps) {
             newCode: z.string().describe('新的工作流代码'),
             reason: z.string().describe('修改原因'),
         }, async ({ positionId, newCode, reason }) => {
-            const position = await positionManager.getPosition(positionId);
+            const position = await positionManager.getProcess(positionId);
             if (!position) {
                 return { content: [mcpText(`Position '${positionId}' not found.`)] };
             }
-            const template = await positionManager.getRoleTemplate(position.roleTemplateName);
+            const template = await positionManager.getProgram(position.programName);
             if (!template) {
-                return { content: [mcpText(`Role template '${position.roleTemplateName}' not found.`)] };
+                return { content: [mcpText(`Program '${position.programName}' not found.`)] };
             }
             const workflowPath = position.config?.workflowPath ?? template.workflowPath;
             const fullPath = path.join(projectRoot, workflowPath);
@@ -82,14 +82,14 @@ export async function createAdminMcpServer(deps) {
             return { content: [mcpText(`Workflow for '${positionId}' updated. Reason: ${reason}`)] };
         }),
         tool(ADMIN_TOOL_NAME.LIST_POSITIONS, '列出所有岗位', {}, async () => {
-            const positions = await positionManager.listPositions();
-            const summary = positions.map(p => `${p.id} (${p.roleTemplateName}) — ${p.status}`).join('\n');
+            const positions = await positionManager.listProcesses();
+            const summary = positions.map(p => `${p.id} (${p.programName}) — ${p.status}`).join('\n');
             return { content: [mcpText(summary || 'No positions.')] };
         }),
         tool(ADMIN_TOOL_NAME.GET_POSITION_STATUS, '查看岗位状态', {
             positionId: z.string().describe('岗位 ID'),
         }, async ({ positionId }) => {
-            const position = await positionManager.getPosition(positionId);
+            const position = await positionManager.getProcess(positionId);
             if (!position) {
                 return { content: [mcpText(`Position '${positionId}' not found.`)] };
             }

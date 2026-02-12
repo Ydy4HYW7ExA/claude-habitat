@@ -1,17 +1,17 @@
 // Position domain public API
 export type {
-  RoleTemplate,
-  Position,
+  Program,
+  Process,
   Task,
   OutputRoute,
-  PositionStatus,
+  ProcessStatus,
   TaskPriority,
   TaskStatus,
   McpToolDefinition,
   RuleDefinition,
   PermissionMode,
-  PositionStore,
-  RoleTemplateStore,
+  ProcessStore,
+  ProgramStore,
 } from './types.js';
-export { PositionManager } from './manager.js';
-export { FilePositionStore, FileRoleTemplateStore } from './store.js';
+export { ProcessManager } from './manager.js';
+export { FileProcessStore, FileProgramStore } from './store.js';

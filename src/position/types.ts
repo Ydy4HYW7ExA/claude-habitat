@@ -1,6 +1,6 @@
 // Position domain types
 
-export interface RoleTemplate {
+export interface Program {
   name: string;
   description: string;
   workflowPath: string;
@@ -38,12 +38,12 @@ export interface RuleDefinition {
 
 export type PermissionMode = 'bypassPermissions' | 'default';
 
-export type PositionStatus = 'idle' | 'busy' | 'error' | 'stopped';
+export type ProcessStatus = 'idle' | 'busy' | 'error' | 'stopped';
 
-export interface Position {
+export interface Process {
   id: string;
-  roleTemplateName: string;
-  status: PositionStatus;
+  programName: string;
+  status: ProcessStatus;
 
   lastSessionId?: string;
   sessionHistory: string[];
@@ -53,7 +53,7 @@ export interface Position {
 
   outputRoutes: OutputRoute[];
 
-  config?: Partial<RoleTemplate>;
+  config?: Partial<Program>;
 
   workDir: string;
   memoryDir: string;
@@ -85,16 +85,17 @@ export interface OutputRoute {
   condition?: (result: unknown) => boolean;
 }
 
-export interface PositionStore {
-  save(position: Position): Promise<void>;
-  load(positionId: string): Promise<Position | null>;
-  loadAll(): Promise<Position[]>;
-  delete(positionId: string): Promise<void>;
+export interface ProcessStore {
+  save(process: Process): Promise<void>;
+  load(processId: string): Promise<Process | null>;
+  loadAll(): Promise<Process[]>;
+  delete(processId: string): Promise<void>;
 }
 
-export interface RoleTemplateStore {
-  save(template: RoleTemplate): Promise<void>;
-  load(name: string): Promise<RoleTemplate | null>;
-  loadAll(): Promise<RoleTemplate[]>;
+export interface ProgramStore {
+  save(program: Program): Promise<void>;
+  load(name: string): Promise<Program | null>;
+  loadAll(): Promise<Program[]>;
   delete(name: string): Promise<void>;
 }
+

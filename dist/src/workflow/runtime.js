@@ -103,7 +103,7 @@ export class WorkflowRuntime {
      */
     async buildMcpServers(position, memoryStore, roleTemplate) {
         const servers = {};
-        // Position-level tools (memory, events)
+        // Process-level tools (memory, events)
         const positionServer = await createPositionMcpServer({
             memoryStore,
             globalMemoryStore: this.config.globalMemoryStore,

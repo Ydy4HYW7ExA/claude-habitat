@@ -10,7 +10,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import type { AttentionInput, AttentionContext } from '../../src/attention/types.js';
 import type { MemoryStore, MemoryEntry, MemoryLayer } from '../../src/memory/types.js';
-import type { Position, RoleTemplate, Task } from '../../src/position/types.js';
+import type { Process, Program, Task } from '../../src/position/types.js';
 
 /** Portable temp directory base for tests (never hardcode /tmp) */
 export const TEST_BASE = path.join(os.tmpdir(), 'habitat-test');
@@ -38,29 +38,29 @@ export function mockMemoryStore(overrides?: Partial<MemoryStore>): MemoryStore {
   } as unknown as MemoryStore;
 }
 
-/** Create a minimal test Position */
-export function makePosition(overrides?: Partial<Position>): Position {
+/** Create a minimal test Process */
+export function makeProcess(overrides?: Partial<Process>): Process {
   return {
     id: 'coder-01',
-    roleTemplateName: 'coder',
+    programName: 'coder',
     status: POSITION_STATUS.IDLE,
     sessionHistory: [],
     taskQueue: [],
     outputRoutes: [],
-    workDir: path.join(TEST_BASE, 'positions', 'coder-01'),
-    memoryDir: path.join(TEST_BASE, 'memory', 'coder-01'),
+    workDir: path.join(TEST_BASE, 'process', 'coder-01'),
+    memoryDir: path.join(TEST_BASE, 'data', 'coder-01', 'memory'),
     createdAt: Date.now(),
     updatedAt: Date.now(),
     ...overrides,
   };
 }
 
-/** Create a minimal test RoleTemplate */
-export function makeRoleTemplate(overrides?: Partial<RoleTemplate>): RoleTemplate {
+/** Create a minimal test Program */
+export function makeProgram(overrides?: Partial<Program>): Program {
   return {
     name: 'coder',
     description: 'A coder role',
-    workflowPath: 'workflows/coder.ts',
+    workflowPath: 'program/app/coder/workflow.mjs',
     ...overrides,
   };
 }
@@ -100,8 +100,8 @@ export function makeMemoryEntry(overrides?: Partial<MemoryEntry>): MemoryEntry {
 export function makeAttentionContext(overrides?: Partial<AttentionContext>): AttentionContext {
   const store = mockMemoryStore();
   return {
-    position: makePosition(),
-    roleTemplate: makeRoleTemplate(),
+    position: makeProcess(),
+    roleTemplate: makeProgram(),
     task: makeTask(),
     memoryStore: store,
     globalMemoryStore: store,

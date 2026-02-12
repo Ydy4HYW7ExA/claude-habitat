@@ -1,7 +1,7 @@
 import type { AttentionInput, AttentionOutput, AttentionStrategy } from '../types.js';
 /**
  * Priority 10 — Injects role framing into system prompt.
- * Sources: RoleTemplate.systemPromptAppend + position context + todo items.
+ * Sources: Program.systemPromptAppend + position context + todo items.
  */
 export declare class RoleFramingStrategy implements AttentionStrategy {
     name: string;

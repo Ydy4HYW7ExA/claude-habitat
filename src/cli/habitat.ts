@@ -29,7 +29,7 @@ export async function startHabitat(projectRoot: string): Promise<void> {
   const { positionManager, memoryFactory, eventBus, orchestrator, logger } = runtime;
 
   // Find dispatcher position
-  const positions = await positionManager.listPositions();
+  const positions = await positionManager.listProcesses();
   if (positions.length === 0) {
     console.error('No positions found. Run: claude-habitat bootstrap');
     process.exit(1);
@@ -37,7 +37,7 @@ export async function startHabitat(projectRoot: string): Promise<void> {
 
   let dispatcherPosition = positions.find(p => p.id === DISPATCHER_ID);
   if (!dispatcherPosition) {
-    dispatcherPosition = positions.find(p => p.roleTemplateName === DISPATCHER_ROLE_TEMPLATE);
+    dispatcherPosition = positions.find(p => p.programName === DISPATCHER_ROLE_TEMPLATE);
   }
   if (!dispatcherPosition) {
     // Fallback: use first position
@@ -45,7 +45,7 @@ export async function startHabitat(projectRoot: string): Promise<void> {
     logger('warn', `No dispatcher position found, using ${dispatcherPosition.id}`);
   }
 
-  const dispatcherTemplate = await positionManager.getRoleTemplate(dispatcherPosition.roleTemplateName);
+  const dispatcherTemplate = await positionManager.getProgram(dispatcherPosition.programName);
 
   // ─── Socket Server ─────────────────────────────────────────────
   const habitatDir = path.join(projectRoot, HABITAT_DIR);
@@ -120,7 +120,7 @@ export async function startHabitat(projectRoot: string): Promise<void> {
       return { content: [{ type: 'text', text: `Task emitted: ${event.id}` }] };
     },
     [TOOL_NAME.GET_MY_TASKS]: async () => {
-      const pos = await positionManager.getPosition(dispatcherPosition!.id);
+      const pos = await positionManager.getProcess(dispatcherPosition!.id);
       const pending = pos?.taskQueue.filter(t => t.status === TASK_STATUS.PENDING) ?? [];
       return { content: [{ type: 'text', text: JSON.stringify(pending, null, 2) }] };
     },
@@ -146,8 +146,8 @@ export async function startHabitat(projectRoot: string): Promise<void> {
     },
     // Admin tools (dispatcher is admin)
     [ADMIN_TOOL_NAME.LIST_POSITIONS]: async () => {
-      const allPositions = await positionManager.listPositions();
-      const summary = allPositions.map(p => `${p.id} (${p.roleTemplateName}) — ${p.status}`).join('\n');
+      const allPositions = await positionManager.listProcesses();
+      const summary = allPositions.map(p => `${p.id} (${p.programName}) — ${p.status}`).join('\n');
       return { content: [{ type: 'text', text: summary || 'No positions.' }] };
     },
     [ADMIN_TOOL_NAME.DISPATCH_TASK]: async (args) => {
@@ -165,7 +165,7 @@ export async function startHabitat(projectRoot: string): Promise<void> {
     },
     [ADMIN_TOOL_NAME.GET_POSITION_STATUS]: async (args) => {
       const { positionId } = args as { positionId: string };
-      const pos = await positionManager.getPosition(positionId);
+      const pos = await positionManager.getProcess(positionId);
       if (!pos) return { content: [{ type: 'text', text: `Position '${positionId}' not found.` }] };
       return { content: [{ type: 'text', text: JSON.stringify(pos, null, 2) }] };
     },

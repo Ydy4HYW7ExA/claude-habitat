@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { PositionManager } from '../position/manager.js';
+import * as os from 'node:os';
+import { ProcessManager } from '../position/manager.js';
 import { FileMemoryStoreFactory } from '../memory/factory.js';
 import { AttentionEnhancer } from '../attention/enhancer.js';
 import { RoleFramingStrategy } from '../attention/strategies/role-framing.js';
@@ -14,13 +15,39 @@ import { SessionManager } from '../ai/session-manager.js';
 import { EventBus } from '../orchestration/event-bus.js';
 import { Orchestrator } from '../orchestration/orchestrator.js';
 import type { ConcurrencyConfig } from '../orchestration/types.js';
-import { HABITAT_DIR, CONFIG_FILE, MEMORY_DIR, formatTimestamp, DEFAULT_AI_MODEL, DEFAULT_AI_MAX_TURNS, DEFAULT_AI_MAX_BUDGET_USD, TASK_EVENT_PREFIX } from '../constants.js';
+import { HABITAT_DIR, CONFIG_FILE, DATA_DIR, formatTimestamp, DEFAULT_AI_MODEL, DEFAULT_AI_MAX_TURNS, DEFAULT_AI_MAX_BUDGET_USD, TASK_EVENT_PREFIX } from '../constants.js';
 
 import type { LogFn } from '../types.js';
 export type { LogFn } from '../types.js';
 
+const INSTALL_INFO_FILE = '.claude-habitat.json';
+
+/**
+ * Load credentials from ~/.claude-habitat/.claude-habitat.json
+ * and inject into process.env if not already set.
+ */
+async function loadCredentials(): Promise<void> {
+  if (process.env.ANTHROPIC_API_KEY) return; // already set
+
+  const infoPath = path.join(os.homedir(), HABITAT_DIR, INSTALL_INFO_FILE);
+  try {
+    const data = JSON.parse(await fs.readFile(infoPath, 'utf-8'));
+    const creds = data?.credentials;
+    if (!creds) return;
+
+    if (creds.apiKey && !process.env.ANTHROPIC_API_KEY) {
+      process.env.ANTHROPIC_API_KEY = creds.apiKey;
+    }
+    if (creds.baseUrl && !process.env.ANTHROPIC_BASE_URL) {
+      process.env.ANTHROPIC_BASE_URL = creds.baseUrl;
+    }
+  } catch {
+    // No credentials file or parse error — SDK will use its own fallbacks
+  }
+}
+
 export interface HabitatRuntime {
-  positionManager: PositionManager;
+  positionManager: ProcessManager;
   memoryFactory: FileMemoryStoreFactory;
   eventBus: EventBus;
   orchestrator: Orchestrator;
@@ -82,11 +109,14 @@ export async function createHabitatRuntime(
   options: RuntimeOptions = {},
 ): Promise<HabitatRuntime> {
   const habitatDir = path.join(projectRoot, HABITAT_DIR);
+
+  // Load credentials from ~/.claude-habitat/.claude-habitat.json
+  await loadCredentials();
   const configData = await fs.readFile(path.join(habitatDir, CONFIG_FILE), 'utf-8');
   const config = JSON.parse(configData) as Record<string, unknown>;
 
-  const positionManager = new PositionManager(habitatDir);
-  const memoryFactory = new FileMemoryStoreFactory(path.join(habitatDir, MEMORY_DIR));
+  const positionManager = new ProcessManager(habitatDir);
+  const memoryFactory = new FileMemoryStoreFactory(path.join(habitatDir, DATA_DIR));
   const eventBus = new EventBus(habitatDir);
 
   // Attention enhancer

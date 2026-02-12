@@ -76,8 +76,8 @@ export class Orchestrator {
         }
         this.executionPromises.clear();
     }
-    async createPosition(roleTemplateName, config) {
-        return this.positionManager.createPosition(roleTemplateName, config?.positionId, config?.overrides);
+    async createPosition(programName, config) {
+        return this.positionManager.createProcess(programName, config?.positionId, config?.overrides);
     }
     async destroyPosition(positionId) {
         // Abort if running
@@ -86,17 +86,17 @@ export class Orchestrator {
             ac.abort();
             this.activeExecutions.delete(positionId);
         }
-        await this.positionManager.destroyPosition(positionId);
+        await this.positionManager.destroyProcess(positionId);
     }
     getPosition(positionId) {
-        return this.positionManager.getPosition(positionId);
+        return this.positionManager.getProcess(positionId);
     }
     async listPositions() {
-        return this.positionManager.listPositions();
+        return this.positionManager.listProcesses();
     }
     async dispatchTask(task) {
         // Validate target position exists before enqueueing
-        const targetPos = await this.positionManager.getPosition(task.targetPositionId);
+        const targetPos = await this.positionManager.getProcess(task.targetPositionId);
         if (!targetPos) {
             throw new Error(`Cannot dispatch task: target position '${task.targetPositionId}' not found`);
         }
@@ -115,17 +115,17 @@ export class Orchestrator {
         return created;
     }
     async triggerPosition(positionId) {
-        const position = await this.positionManager.getPosition(positionId);
+        const position = await this.positionManager.getProcess(positionId);
         if (!position)
-            throw new Error(`Position not found: ${positionId}`);
+            throw new Error(`Process not found: ${positionId}`);
         if (position.status === POSITION_STATUS.BUSY)
             return; // Already running
         const task = await this.positionManager.dequeueTask(positionId);
         if (!task)
             return; // No pending tasks
-        const template = await this.positionManager.getRoleTemplate(position.roleTemplateName);
+        const template = await this.positionManager.getProgram(position.programName);
         if (!template)
-            throw new Error(`Role template not found: ${position.roleTemplateName}`);
+            throw new Error(`Program not found: ${position.programName}`);
         await this.positionManager.setStatus(positionId, POSITION_STATUS.BUSY);
         const ac = new AbortController();
         this.activeExecutions.set(positionId, ac);
@@ -154,7 +154,7 @@ export class Orchestrator {
                     type: task.type,
                 }));
                 // Check for output routes
-                const pos = await this.positionManager.getPosition(positionId);
+                const pos = await this.positionManager.getProcess(positionId);
                 if (pos) {
                     for (const route of pos.outputRoutes) {
                         if (this.matchTaskType(task.type, route.taskType)) {
@@ -200,13 +200,13 @@ export class Orchestrator {
             finally {
                 clearTimeout(timeout);
                 this.activeExecutions.delete(positionId);
-                const currentPos = await this.positionManager.getPosition(positionId);
+                const currentPos = await this.positionManager.getProcess(positionId);
                 if (currentPos && currentPos.status === POSITION_STATUS.BUSY) {
                     await this.positionManager.setStatus(positionId, POSITION_STATUS.IDLE);
                 }
                 // Re-trigger if more pending tasks (don't dequeue here — triggerPosition does it)
                 if (this.running) {
-                    const pos = await this.positionManager.getPosition(positionId);
+                    const pos = await this.positionManager.getProcess(positionId);
                     const hasPending = pos?.taskQueue.some(t => t.status === TASK_STATUS.PENDING);
                     if (hasPending) {
                         this.triggerPosition(positionId).catch((err) => {
@@ -223,7 +223,7 @@ export class Orchestrator {
         this.executionPromises.set(positionId, executionPromise);
     }
     async getStatus() {
-        const allPositions = await this.positionManager.listPositions();
+        const allPositions = await this.positionManager.listProcesses();
         let pendingTasks = 0;
         const positions = allPositions.map(p => {
             const pending = p.taskQueue.filter(t => t.status === TASK_STATUS.PENDING).length;

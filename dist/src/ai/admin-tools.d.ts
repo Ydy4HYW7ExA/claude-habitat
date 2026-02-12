@@ -1,6 +1,6 @@
-import type { PositionManager } from '../position/manager.js';
+import type { ProcessManager } from '../position/manager.js';
 export interface AdminToolDeps {
-    positionManager: PositionManager;
+    positionManager: ProcessManager;
     projectRoot: string;
 }
 /**

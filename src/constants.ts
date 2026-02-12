@@ -6,14 +6,14 @@
 /** Root directory name for habitat runtime data */
 export const HABITAT_DIR = '.claude-habitat';
 
-/** Subdirectory names within HABITAT_DIR */
-export const ROLES_DIR = 'roles';
-export const WORKFLOW_DIR = 'workflows';
-export const POSITIONS_DIR = 'positions';
-export const MEMORY_DIR = 'memory';
-export const EVENTS_DIR = 'events';
-export const LOGS_DIR = 'logs';
-export const GLOBAL_MEMORY_ID = '_global';
+/** New directory structure: program/data/process */
+export const PROGRAM_DIR = 'program';
+export const PROGRAM_SDK_DIR = 'sdk';
+export const PROGRAM_APP_DIR = 'app';
+export const DATA_DIR = 'data';
+export const SHARED_DATA_ID = '_shared';
+export const PROCESS_DIR = 'process';
+export const MANIFEST_FILE = 'manifest.json';
 export const LINKS_FILE = '_links.json';
 
 /** Position subdirectory names */
@@ -173,7 +173,7 @@ export const DEFAULT_SETTING_SOURCES = ['project'] as const;
 
 /** Fields safe to modify via modify_position admin tool */
 export const ADMIN_SAFE_FIELDS = new Set([
-  'status', 'config', 'outputRoutes', 'roleTemplateName',
+  'status', 'config', 'outputRoutes', 'programName',
 ]);
 
 // ─── ID Generation ──────────────────────────────────────────────────

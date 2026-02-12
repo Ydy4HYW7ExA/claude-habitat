@@ -3,26 +3,30 @@ import { FileMemoryStore } from './store.js';
 import { IndexEngine } from './index-engine.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { LINKS_FILE, GLOBAL_MEMORY_ID, RELEVANCE_DECAY_FACTOR, DEFAULT_CROSS_SEARCH_LIMIT } from '../constants.js';
+import { LINKS_FILE, SHARED_DATA_ID, RELEVANCE_DECAY_FACTOR, DEFAULT_CROSS_SEARCH_LIMIT } from '../constants.js';
 
 export class FileMemoryStoreFactory implements MemoryStoreFactory {
   private stores = new Map<string, FileMemoryStore>();
   private linksPath: string;
 
   constructor(private baseDir: string) {
-    this.linksPath = path.join(baseDir, LINKS_FILE);
+    this.linksPath = path.join(baseDir, SHARED_DATA_ID, LINKS_FILE);
   }
 
   getStore(positionId: string): FileMemoryStore {
     if (this.stores.has(positionId)) return this.stores.get(positionId)!;
-    const storeDir = path.join(this.baseDir, positionId);
+    const storeDir = path.join(this.baseDir, positionId, 'memory');
     const store = new FileMemoryStore(storeDir, positionId);
     this.stores.set(positionId, store);
     return store;
   }
 
   getGlobalStore(): FileMemoryStore {
-    return this.getStore(GLOBAL_MEMORY_ID);
+    if (this.stores.has(SHARED_DATA_ID)) return this.stores.get(SHARED_DATA_ID)!;
+    const storeDir = path.join(this.baseDir, SHARED_DATA_ID, 'memory');
+    const store = new FileMemoryStore(storeDir, SHARED_DATA_ID);
+    this.stores.set(SHARED_DATA_ID, store);
+    return store;
   }
 
   async searchAcross(query: string, positionIds?: string[]): Promise<CrossSearchResult[]> {
@@ -70,7 +74,7 @@ export class FileMemoryStoreFactory implements MemoryStoreFactory {
     try {
       const entries = await fs.readdir(this.baseDir, { withFileTypes: true });
       return entries
-        .filter(d => d.isDirectory() && !d.name.startsWith('.') && d.name !== LINKS_FILE)
+        .filter(d => d.isDirectory() && !d.name.startsWith('.') && d.name !== SHARED_DATA_ID)
         .map(d => d.name);
     } catch {
       return [];

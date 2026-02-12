@@ -3,7 +3,7 @@
  * The dispatcher doesn't go through SessionManager (it spawns claude CLI directly).
  */
 import type { AiResult, SdkResultMessage } from './types.js';
-import type { Position, RoleTemplate } from '../position/types.js';
+import type { Process, Program } from '../position/types.js';
 import type { LogFn } from '../types.js';
 import { MessageChannel } from './message-channel.js';
 import { mapSdkResult } from './result-mapper.js';
@@ -35,8 +35,8 @@ export class SessionManager {
   constructor(private config: SessionManagerConfig) {}
 
   async startSession(
-    position: Position,
-    roleTemplate: RoleTemplate,
+    position: Process,
+    roleTemplate: Program,
     mcpServers: Record<string, unknown>,
   ): Promise<SessionHandle> {
     if (this.sessions.has(position.id)) {
@@ -69,8 +69,8 @@ export class SessionManager {
 
   private async startConsumptionLoop(
     handle: SessionHandle,
-    position: Position,
-    roleTemplate: RoleTemplate,
+    position: Process,
+    roleTemplate: Program,
     mcpServers: Record<string, unknown>,
   ): Promise<void> {
     try {

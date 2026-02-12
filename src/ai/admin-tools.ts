@@ -1,14 +1,14 @@
-import type { PositionManager } from '../position/manager.js';
-import type { RoleTemplate, Position } from '../position/types.js';
+import type { ProcessManager } from '../position/manager.js';
+import type { Program, Process } from '../position/types.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import {
-  WORKFLOW_DIR, HABITAT_DIR, ORG_ARCHITECT_ID, MCP_ADMIN_SERVER_NAME, CONFIG_VERSION,
+  PROGRAM_DIR, PROGRAM_APP_DIR, HABITAT_DIR, ORG_ARCHITECT_ID, MCP_ADMIN_SERVER_NAME, CONFIG_VERSION,
   ADMIN_TOOL_NAME, MODELS, TASK_PRIORITY, ADMIN_SAFE_FIELDS, mcpText,
 } from '../constants.js';
 
 export interface AdminToolDeps {
-  positionManager: PositionManager;
+  positionManager: ProcessManager;
   projectRoot: string;
 }
 
@@ -31,13 +31,13 @@ export async function createAdminMcpServer(deps: AdminToolDeps) {
       allowedTools: z.array(z.string()).optional().describe('允许的工具列表'),
       disallowedTools: z.array(z.string()).optional().describe('禁止的工具列表'),
     }, async ({ name, description, workflowCode, systemPromptAppend, model, allowedTools, disallowedTools }) => {
-      const workflowPath = path.join(HABITAT_DIR, WORKFLOW_DIR, `${name}.ts`);
-      const fullWorkflowPath = path.join(projectRoot, workflowPath);
+      const programDir = path.join(projectRoot, HABITAT_DIR, PROGRAM_DIR, PROGRAM_APP_DIR, name);
+      const workflowPath = path.join(HABITAT_DIR, PROGRAM_DIR, PROGRAM_APP_DIR, name, 'workflow.mjs');
 
-      await fs.mkdir(path.dirname(fullWorkflowPath), { recursive: true });
-      await fs.writeFile(fullWorkflowPath, workflowCode);
+      await fs.mkdir(programDir, { recursive: true });
+      await fs.writeFile(path.join(programDir, 'workflow.mjs'), workflowCode);
 
-      const template: RoleTemplate = {
+      const template: Program = {
         name,
         description,
         workflowPath,
@@ -47,16 +47,16 @@ export async function createAdminMcpServer(deps: AdminToolDeps) {
         disallowedTools,
       };
 
-      await positionManager.registerRoleTemplate(template);
+      await positionManager.registerProgram(template);
       return { content: [mcpText(`Role template '${name}' created.`)] };
     }),
 
     tool(ADMIN_TOOL_NAME.CREATE_POSITION, '从模板创建岗位实例', {
-      roleTemplateName: z.string().describe('职业模板名称'),
-      positionId: z.string().optional().describe('自定义岗位 ID'),
+      roleTemplateName: z.string().describe('程序名称'),
+      positionId: z.string().optional().describe('自定义进程 ID'),
     }, async ({ roleTemplateName, positionId }) => {
-      const position = await positionManager.createPosition(roleTemplateName, positionId);
-      return { content: [mcpText(`Position '${position.id}' created from template '${roleTemplateName}'.`)] };
+      const position = await positionManager.createProcess(roleTemplateName, positionId);
+      return { content: [mcpText(`Process '${position.id}' created from program '${roleTemplateName}'.`)] };
     }),
 
     tool(ADMIN_TOOL_NAME.MODIFY_POSITION, '修改岗位配置', {
@@ -70,7 +70,7 @@ export async function createAdminMcpServer(deps: AdminToolDeps) {
           filtered[key] = value;
         }
       }
-      await positionManager.updatePosition(positionId, filtered as Partial<Position>);
+      await positionManager.updateProcess(positionId, filtered as Partial<Process>);
       return { content: [mcpText(`Position '${positionId}' updated.`)] };
     }),
 
@@ -78,7 +78,7 @@ export async function createAdminMcpServer(deps: AdminToolDeps) {
       positionId: z.string().describe('岗位 ID'),
       reason: z.string().describe('删除原因'),
     }, async ({ positionId, reason }) => {
-      await positionManager.destroyPosition(positionId);
+      await positionManager.destroyProcess(positionId);
       return { content: [mcpText(`Position '${positionId}' deleted. Reason: ${reason}`)] };
     }),
 
@@ -87,14 +87,14 @@ export async function createAdminMcpServer(deps: AdminToolDeps) {
       newCode: z.string().describe('新的工作流代码'),
       reason: z.string().describe('修改原因'),
     }, async ({ positionId, newCode, reason }) => {
-      const position = await positionManager.getPosition(positionId);
+      const position = await positionManager.getProcess(positionId);
       if (!position) {
         return { content: [mcpText(`Position '${positionId}' not found.`)] };
       }
 
-      const template = await positionManager.getRoleTemplate(position.roleTemplateName);
+      const template = await positionManager.getProgram(position.programName);
       if (!template) {
-        return { content: [mcpText(`Role template '${position.roleTemplateName}' not found.`)] };
+        return { content: [mcpText(`Program '${position.programName}' not found.`)] };
       }
 
       const workflowPath = position.config?.workflowPath ?? template.workflowPath;
@@ -105,9 +105,9 @@ export async function createAdminMcpServer(deps: AdminToolDeps) {
     }),
 
     tool(ADMIN_TOOL_NAME.LIST_POSITIONS, '列出所有岗位', {}, async () => {
-      const positions = await positionManager.listPositions();
+      const positions = await positionManager.listProcesses();
       const summary = positions.map(p =>
-        `${p.id} (${p.roleTemplateName}) — ${p.status}`
+        `${p.id} (${p.programName}) — ${p.status}`
       ).join('\n');
       return { content: [mcpText(summary || 'No positions.')] };
     }),
@@ -115,7 +115,7 @@ export async function createAdminMcpServer(deps: AdminToolDeps) {
     tool(ADMIN_TOOL_NAME.GET_POSITION_STATUS, '查看岗位状态', {
       positionId: z.string().describe('岗位 ID'),
     }, async ({ positionId }) => {
-      const position = await positionManager.getPosition(positionId);
+      const position = await positionManager.getProcess(positionId);
       if (!position) {
         return { content: [mcpText(`Position '${positionId}' not found.`)] };
       }

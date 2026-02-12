@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Orchestrator } from '../../src/orchestration/orchestrator.js';
 import { EventBus } from '../../src/orchestration/event-bus.js';
-import { PositionManager } from '../../src/position/manager.js';
+import { ProcessManager } from '../../src/position/manager.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -16,11 +16,11 @@ describe('Orchestrator', () => {
     const coderTemplate = {
         name: 'coder',
         description: 'Software engineer',
-        workflowPath: 'workflows/coder.ts',
+        workflowPath: 'program/app/coder/workflow.mjs',
     };
     beforeEach(async () => {
         tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-test-'));
-        positionManager = new PositionManager(tmpDir);
+        positionManager = new ProcessManager(tmpDir);
         eventBus = new EventBus(tmpDir);
         executeCalls = [];
         mockRuntime = {
@@ -35,7 +35,7 @@ describe('Orchestrator', () => {
             maxConcurrentAiCalls: 1,
             positionTimeout: 10000,
         });
-        await positionManager.registerRoleTemplate(coderTemplate);
+        await positionManager.registerProgram(coderTemplate);
     });
     afterEach(async () => {
         await orchestrator.stop();
@@ -136,18 +136,18 @@ describe('Orchestrator', () => {
     });
     it('should throw when triggering non-existent position', async () => {
         await expect(orchestrator.triggerPosition('nonexistent'))
-            .rejects.toThrow('Position not found');
+            .rejects.toThrow('Process not found');
     });
     it('should skip route when condition throws', async () => {
         await orchestrator.createPosition('coder', { positionId: 'coder-01' });
         // Add an output route with a throwing condition
-        const pos = await positionManager.getPosition('coder-01');
+        const pos = await positionManager.getProcess('coder-01');
         pos.outputRoutes.push({
             taskType: '*',
             targetPositionId: 'coder-01',
             condition: () => { throw new Error('condition boom'); },
         });
-        await positionManager.updatePosition('coder-01', { outputRoutes: pos.outputRoutes });
+        await positionManager.updateProcess('coder-01', { outputRoutes: pos.outputRoutes });
         await positionManager.enqueueTask('coder-01', {
             sourcePositionId: 'orchestrator',
             targetPositionId: 'coder-01',
@@ -162,13 +162,13 @@ describe('Orchestrator', () => {
     });
     it('should skip route when transform throws', async () => {
         await orchestrator.createPosition('coder', { positionId: 'coder-01' });
-        const pos = await positionManager.getPosition('coder-01');
+        const pos = await positionManager.getProcess('coder-01');
         pos.outputRoutes.push({
             taskType: '*',
             targetPositionId: 'coder-01',
             transform: () => { throw new Error('transform boom'); },
         });
-        await positionManager.updatePosition('coder-01', { outputRoutes: pos.outputRoutes });
+        await positionManager.updateProcess('coder-01', { outputRoutes: pos.outputRoutes });
         await positionManager.enqueueTask('coder-01', {
             sourcePositionId: 'orchestrator',
             targetPositionId: 'coder-01',

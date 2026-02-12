@@ -1,40 +1,40 @@
 import * as path from 'node:path';
 import { ensureInitialized } from './runtime-factory.js';
-import { PositionManager } from '../position/manager.js';
+import { ProcessManager } from '../position/manager.js';
 import { FileMemoryStoreFactory } from '../memory/factory.js';
 import { EventBus } from '../orchestration/event-bus.js';
-import { MEMORY_DIR, SUMMARY_MAX_LENGTH, formatTimestamp, DEFAULT_STATUS_EVENT_LIMIT, TASK_STATUS } from '../constants.js';
+import { DATA_DIR, SUMMARY_MAX_LENGTH, formatTimestamp, DEFAULT_STATUS_EVENT_LIMIT, TASK_STATUS } from '../constants.js';
 
 export async function status(projectRoot: string): Promise<void> {
   const habitatDir = await ensureInitialized(projectRoot);
 
-  const positionManager = new PositionManager(habitatDir);
-  const memoryFactory = new FileMemoryStoreFactory(path.join(habitatDir, MEMORY_DIR));
+  const positionManager = new ProcessManager(habitatDir);
+  const memoryFactory = new FileMemoryStoreFactory(path.join(habitatDir, DATA_DIR));
   const eventBus = new EventBus(habitatDir);
 
   // Positions
-  const positions = await positionManager.listPositions();
+  const positions = await positionManager.listProcesses();
   console.log('=== Claude Habitat Status ===');
   console.log('');
 
   if (positions.length === 0) {
-    console.log('Positions: (none)');
+    console.log('Processes: (none)');
     console.log('Run "claude-habitat bootstrap" to create your AI team.');
   } else {
-    console.log(`Positions (${positions.length}):`);
+    console.log(`Processes (${positions.length}):`);
     for (const pos of positions) {
       const pendingTasks = pos.taskQueue.filter(t => t.status === TASK_STATUS.PENDING).length;
       const doneTasks = pos.taskQueue.filter(t => t.status === TASK_STATUS.DONE).length;
       const failedTasks = pos.taskQueue.filter(t => t.status === TASK_STATUS.FAILED).length;
-      console.log(`  ${pos.id} (${pos.roleTemplateName}) — ${pos.status}`);
+      console.log(`  ${pos.id} (${pos.programName}) — ${pos.status}`);
       console.log(`    Tasks: ${pendingTasks} pending, ${doneTasks} done, ${failedTasks} failed`);
     }
   }
 
   // Role templates
-  const templates = await positionManager.listRoleTemplates();
+  const templates = await positionManager.listPrograms();
   console.log('');
-  console.log(`Role Templates (${templates.length}):`);
+  console.log(`Programs (${templates.length}):`);
   for (const tmpl of templates) {
     console.log(`  ${tmpl.name} — ${tmpl.description.slice(0, SUMMARY_MAX_LENGTH)}`);
   }

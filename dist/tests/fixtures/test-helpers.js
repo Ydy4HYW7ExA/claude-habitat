@@ -30,28 +30,28 @@ export function mockMemoryStore(overrides) {
         ...overrides,
     };
 }
-/** Create a minimal test Position */
-export function makePosition(overrides) {
+/** Create a minimal test Process */
+export function makeProcess(overrides) {
     return {
         id: 'coder-01',
-        roleTemplateName: 'coder',
+        programName: 'coder',
         status: POSITION_STATUS.IDLE,
         sessionHistory: [],
         taskQueue: [],
         outputRoutes: [],
-        workDir: path.join(TEST_BASE, 'positions', 'coder-01'),
-        memoryDir: path.join(TEST_BASE, 'memory', 'coder-01'),
+        workDir: path.join(TEST_BASE, 'process', 'coder-01'),
+        memoryDir: path.join(TEST_BASE, 'data', 'coder-01', 'memory'),
         createdAt: Date.now(),
         updatedAt: Date.now(),
         ...overrides,
     };
 }
-/** Create a minimal test RoleTemplate */
-export function makeRoleTemplate(overrides) {
+/** Create a minimal test Program */
+export function makeProgram(overrides) {
     return {
         name: 'coder',
         description: 'A coder role',
-        workflowPath: 'workflows/coder.ts',
+        workflowPath: 'program/app/coder/workflow.mjs',
         ...overrides,
     };
 }
@@ -88,8 +88,8 @@ export function makeMemoryEntry(overrides) {
 export function makeAttentionContext(overrides) {
     const store = mockMemoryStore();
     return {
-        position: makePosition(),
-        roleTemplate: makeRoleTemplate(),
+        position: makeProcess(),
+        roleTemplate: makeProgram(),
         task: makeTask(),
         memoryStore: store,
         globalMemoryStore: store,
